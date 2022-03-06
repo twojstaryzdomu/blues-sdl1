@@ -36,6 +36,7 @@ static int _shake_dx, _shake_dy;
 static uint32_t flags, rmask, gmask, bmask, amask;
 static SDL_Surface *_renderer;
 static SDL_Surface *_texture;
+static SDL_Surface *_flipped_cache[MAX_SPRITESHEETS][MAX_SPRITES];
 static SDL_PixelFormat *_fmt;
 static SDL_Palette *_palette;
 static uint32_t _screen_palette[256];
@@ -200,11 +201,21 @@ static void sdl2_set_screen_palette(const uint8_t *colors, int offset, int count
 		colors += 3;
 	}
 	for (int i = 0; i < ARRAYSIZE(_spritesheets); ++i) {
+		print_debug(DBG_SYSTEM, "Setting palette for spritesheet %d", i);
 		struct spritesheet_t *sheet = &_spritesheets[i];
 		if (sheet->surface) {
 			SDL_FreeSurface(sheet->texture);
 			SDL_SetColors(sheet->surface, _palette->colors, 0, 256);
 			sheet->texture = SDL_DisplayFormatAlpha(sheet->surface);
+		} else {
+			print_debug(DBG_SYSTEM, "No surface found for palette %d", i);
+		}
+		for (int s = 0; s < MAX_SPRITES; ++s) {
+			if (_flipped_cache[i][s]) {
+				print_debug(DBG_SYSTEM, "Freeing %d", s);
+				SDL_FreeSurface(_flipped_cache[i][s]);
+				_flipped_cache[i][s] = NULL;
+			}
 		}
 	}
 }
@@ -333,13 +344,20 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 			t.x = sheet->r[spr->num].x;
 			t.w = sheet->r[spr->num].w;
 			t.h = sheet->r[spr->num].h;
+			t.y = sheet->r[spr->num].y;
 			if (spr->xflip) {
-				// render flipped copy half a texture height down
-				t.y = sheet->r[spr->num].y + sheet->texture->h / 2;
+				if (_flipped_cache[spr->sheet][spr->num]) {
+					print_debug(DBG_SYSTEM, "Cache hit for sprite %d from sheet %d", spr->num, spr->sheet);
+				} else {
+					if (t.w && t.h) { // only sprites with w & h
+						print_debug(DBG_SYSTEM, "Rendering sprite %d from sheet %d", spr->num, spr->sheet);
+						_flipped_cache[spr->sheet][spr->num] = CopyRectFlipped(sheet->texture, &t);
+					}
+				}
+				SDL_BlitSurface(_flipped_cache[spr->sheet][spr->num], 0, _renderer, &r);
 			} else {
-				t.y = sheet->r[spr->num].y;
+				SDL_BlitSurface(sheet->texture, &t, _renderer, &r);
 			}
-			SDL_BlitSurface(sheet->texture, &t, _renderer, &r);
 		}
 		SDL_SetClipRect(_renderer, 0);
 
@@ -557,20 +575,14 @@ static void render_load_sprites(int spr_type, int count, const struct sys_rect_t
 		rect->w = r[i].w;
 		rect->h = r[i].h;
 	}
-	SDL_Surface *surface = SDL_CreateRGBSurface(0, w, h * 2, 8, 0x0, 0x0, 0x0, 0x0); /* twice as high to fit flipped textures */
+	SDL_Surface *surface = SDL_CreateRGBSurface(0, w, h, 8, 0x0, 0x0, 0x0, 0x0);
 	SDL_SetColors(surface, _palette->colors, 0, 256);
 	SDL_SetColorKey(surface, SDL_SRCCOLORKEY | SDL_RLEACCEL, color_key);
 	SDL_LockSurface(surface);
 	for (int y = 0; y < h; ++y) {
 		memcpy(((uint8_t *)surface->pixels) + y * surface->pitch, data + y * w, w);
-		memcpy(((uint8_t *)surface->pixels) + (y + h) * surface->pitch, data + y * w, w); /* copy for flipping */
 	}
 	SDL_UnlockSurface(surface);
-	for (int i = 0; i < count; ++i) { /* flip each sprite half a texture length down */
-		if (r[i].w && r[i].h) { /* only sprites with w & h */
-			surface = FlipSurfaceRect(surface, r[i].x, r[i].y + h, r[i].w, r[i].h);
-		}
-	}
 	sheet->texture = SDL_DisplayFormatAlpha(surface);
 	if (update_pal) { /* update texture on palette change */
 		sheet->surface = surface;
@@ -580,6 +592,13 @@ static void render_load_sprites(int spr_type, int count, const struct sys_rect_t
 }
 
 static void render_unload_sprites(int spr_type) {
+	for (int s = 0; s < MAX_SPRITES; s++) {
+		if (_flipped_cache[spr_type][s]) {
+			print_debug(DBG_SYSTEM, "Freeing cached sprite #%d from sheet %d %d", s, spr_type);
+			SDL_FreeSurface(_flipped_cache[spr_type][s]);
+			_flipped_cache[spr_type][s] = NULL;
+		}
+	}
 	struct spritesheet_t *sheet = &_spritesheets[spr_type];
 	free(sheet->r);
 	if (sheet->surface) {
@@ -592,7 +611,7 @@ static void render_unload_sprites(int spr_type) {
 }
 
 static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip) {
-	assert(_sprites_count / 2 < MAX_SPRITES);
+	assert(_sprites_count < MAX_SPRITES);
 	struct sprite_t *spr = &_sprites[_sprites_count];
 	spr->sheet = spr_type;
 	spr->num = frame;

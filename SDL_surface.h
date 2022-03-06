@@ -56,3 +56,23 @@ SDL_Surface *FlipSurfaceRect(SDL_Surface *surface, int abs_x, int abs_y, int off
 	SDL_UnlockSurface(surface);
 	return surface;
 }
+
+SDL_Surface *CopyRectFlipped(SDL_Surface *surface, SDL_Rect *r) {
+	char *l, *t;
+	SDL_PixelFormat *f = surface->format;
+	int s = f->BytesPerPixel;
+	r->h = r->h > 1 ? r->h : surface->h;
+	r->w = r->w > 1 ? r->w : surface->w;
+	SDL_Surface *flipped = SDL_CreateRGBSurface(0, r->w, r->h, f->BitsPerPixel, f->Rmask, f->Gmask, f->Bmask, f->Amask);
+	SDL_SetColorKey(flipped, SDL_SRCCOLORKEY | SDL_RLEACCEL, f->colorkey);
+	SDL_LockSurface(flipped);
+	for(int y = 0; y < r->h; y++) {
+		for(int x = 0; x < r->w; x++) {
+		l = GetPixelAddress(flipped, x, y);
+		t = GetPixelAddress(surface, r->x + r->w - x - 1, y + r->y);
+		memcpy(l, t, s);
+		}
+	}
+	SDL_UnlockSurface(flipped);
+	return flipped;
+}
