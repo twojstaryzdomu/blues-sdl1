@@ -8,10 +8,6 @@ struct options_t g_options;
 
 static const char *DEFAULT_DATA_PATH = ".";
 
-static const int DEFAULT_SCALE_FACTOR = 2;
-
-static const char *DEFAULT_SCALE_FILTER = 0; // nearest pixel sampling
-
 static const char *USAGE =
 	"Usage: %s [OPTIONS]...\n"
 	"  --datapath=PATH   Path to data files (default '.')\n"
@@ -19,8 +15,6 @@ static const char *USAGE =
 	"  --cheats=MASK     Cheats mask\n"
 	"  --startpos=XxY    Start at position (X,Y)\n"
 	"  --fullscreen      Enable fullscreen\n"
-	"  --scale=N         Graphics scaling factor (default 2)\n"
-	"  --filter=NAME     Graphics scaling filter (default 'nearest')\n"
 	"  --screensize=WxH  Graphics screen size (default 320x200)\n"
 	"  --cga             Enable CGA colors\n"
 	"  --dosscroll       Enable DOS style screen scrolling\n"
@@ -65,8 +59,6 @@ int main(int argc, char *argv[]) {
 	g_options.hybrid_color = false;
 	g_options.show_map = true;
 	const char *data_path = DEFAULT_DATA_PATH;
-	int scale_factor = DEFAULT_SCALE_FACTOR;
-	const char *scale_filter = DEFAULT_SCALE_FILTER;
 	bool fullscreen = false;
 	if (argc == 2) {
 		struct stat st;
@@ -82,8 +74,6 @@ int main(int argc, char *argv[]) {
 			{ "cheats",     required_argument, 0, 4 },
 			{ "startpos",   required_argument, 0, 5 },
 			{ "fullscreen", no_argument,       0, 6 },
-			{ "scale",      required_argument, 0, 7 },
-			{ "filter",     required_argument, 0, 8 },
 			{ "screensize", required_argument, 0, 9 },
 			{ "cga",        no_argument,       0, 10 },
 			{ "dosscroll",  no_argument,       0, 11 },
@@ -115,12 +105,6 @@ int main(int argc, char *argv[]) {
 			break;
 		case 6:
 			fullscreen = true;
-			break;
-		case 7:
-			scale_factor = atoi(optarg);
-			break;
-		case 8:
-			scale_filter = strdup(optarg);
 			break;
 		case 9:
 			if (sscanf(optarg, "%dx%d", &g_options.screen_w, &g_options.screen_h) == 2) {
@@ -155,15 +139,12 @@ int main(int argc, char *argv[]) {
 		fprintf(stdout, "No data files found\n");
 	} else {
 		g_sys.init();
-		g_sys.set_screen_size(GAME_SCREEN_W, GAME_SCREEN_H, game->name, scale_factor, scale_filter, fullscreen, g_options.hybrid_color);
+		g_sys.set_screen_size(GAME_SCREEN_W, GAME_SCREEN_H, game->name, fullscreen, g_options.hybrid_color);
 		game->run(data_path);
 		g_sys.fini();
 	}
 	if (data_path != DEFAULT_DATA_PATH) {
 		free((char *)data_path);
-	}
-	if (scale_filter != DEFAULT_SCALE_FILTER) {
-		free((char *)scale_filter);
 	}
 	return 0;
 }
