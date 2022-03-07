@@ -468,8 +468,12 @@ static void handle_joystickaxismotion(int axis, int value, struct input_t *input
 }
 
 static void handle_joystickbutton(int button, int pressed, struct input_t *input) {
-	if (button == 0) {
+	switch(button) {
+	case 0:
 		input->space = pressed;
+		break;
+	case 8:
+		g_sys.input.quit = true;
 	}
 }
 
