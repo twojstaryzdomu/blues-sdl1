@@ -238,7 +238,8 @@ static void fade_palette_helper(int in) {
 		}
 		SDL_SetRenderDrawColor(_renderer, 0, 0, 0, alpha);
 		SDL_RenderClear(_renderer);
-		SDL_RenderCopy(_renderer, _texture, 0, 0);
+		if (_texture)
+			SDL_RenderCopy(_renderer, _texture, 0, 0);
 		SDL_RenderFillRect(_renderer, &r);
 		SDL_RenderPresent(_renderer);
 		SDL_Delay(30);
