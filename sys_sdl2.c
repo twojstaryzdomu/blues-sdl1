@@ -240,7 +240,8 @@ static void fade_palette_helper(int in) {
 		}
 		Uint32 color = SDL_MapRGBA(surface->format, component, component, component, alpha);
 		SDL_FillRect(surface, 0, color);
-		SDL_BlitSurface(_texture, 0, _renderer, 0);
+		if (_texture)
+			SDL_BlitSurface(_texture, 0, _renderer, 0);
 		SDL_BlitSurface(surface, 0, _renderer, 0);
 		SDL_Flip(_renderer);
 		SDL_Delay(30);
