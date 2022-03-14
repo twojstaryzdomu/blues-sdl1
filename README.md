@@ -42,7 +42,7 @@ Compared to the original DOS executables, the rewritten engines feature :
 - horizontal scrolling
 - configurable screen size
 - game cheats : unlimited lifes and energy, no hit
-
+- game pad support with a user-defined jump button
 
 ## Running
 
@@ -64,6 +64,7 @@ Usage: blues [OPTIONS]...
   --hybrid          Enable fuchsia color as in Hybrid crack
   --palette=NUM     Pick palette NUM for screen colors
   --nomap           Do not scroll map before each level
+  --jumpbtn=NUM     Select button NUM for jump (default 0)
 ```
 
 ## Downloads

@@ -76,6 +76,7 @@ static int sdl2_init() {
 			_joystick = SDL_JoystickOpen(i);
 			if (_joystick) {
 				fprintf(stdout, "Using joystick '%s'\n", SDL_JoystickName(i));
+				fprintf(stdout, "Jump button: %d\n", g_sys.input.jump_button);
 			}
 		}
 	}
@@ -469,8 +470,19 @@ static void handle_joystickaxismotion(int axis, int value, struct input_t *input
 }
 
 static void handle_joystickbutton(int button, int pressed, struct input_t *input) {
+	if (button == g_sys.input.jump_button) {
+		if (pressed) {
+			input->direction |= INPUT_DIRECTION_UP;
+		} else {
+			input->direction &= ~INPUT_DIRECTION_UP;
+		}
+		return;
+	}
 	switch(button) {
 	case 0:
+	case 1:
+	case 2:
+	case 3:
 		input->space = pressed;
 		break;
 	case 8:
@@ -489,7 +501,6 @@ static int handle_event(const SDL_Event *ev) {
 		case SDL_APPACTIVE:
 			g_sys.paused = (ev->active.gain == 0);
 			SDL_PauseAudio(g_sys.paused);
-			break;
 		}
 		break;
 	case SDL_KEYUP:
