@@ -488,6 +488,13 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 		break;
 	case 8:
 		g_sys.input.quit = true;
+		break;
+	case 9:
+		if (pressed) {
+			g_sys.paused = (bool)(g_sys.paused ? false : true);
+			if (g_sys.audio)
+				SDL_PauseAudio(g_sys.paused);
+		}
 	}
 }
 
