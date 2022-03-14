@@ -22,6 +22,7 @@ static const char *USAGE =
 	"  --palette=NUM     Pick palette NUM for screen colors\n"
 	"  --nomap           Do not scroll map before each level\n"
 	"  --jumpbtn=NUM     Select button NUM for jump (default 0)\n"
+	"  --nosound         Disable sound\n"
 ;
 
 static int DEFAULT_JUMP_BUTTON = 0;
@@ -61,6 +62,7 @@ int main(int argc, char *argv[]) {
 	g_options.dos_scrolling = false;
 	g_options.hybrid_color = false;
 	g_options.show_map = true;
+	g_sys.audio = true;
 	const char *data_path = DEFAULT_DATA_PATH;
 	g_sys.input.jump_button = DEFAULT_JUMP_BUTTON;
 	bool fullscreen = false;
@@ -85,6 +87,7 @@ int main(int argc, char *argv[]) {
 			{ "palette",    required_argument, 0, 13 },
 			{ "nomap",      no_argument,       0, 14 },
 			{ "jumpbtn",    required_argument, 0, 15 },
+			{ "nosound",    no_argument      , 0, 16 },
 			{ 0, 0, 0, 0 },
 		};
 		int index;
@@ -136,6 +139,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 15:
 			sscanf(optarg, "%d", &g_sys.input.jump_button);
+			break;
+		case 16:
+			g_sys.audio = false;
 			break;
 		default:
 			fprintf(stdout, USAGE, argv[0]);

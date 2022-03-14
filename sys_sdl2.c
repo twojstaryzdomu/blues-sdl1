@@ -63,7 +63,7 @@ static int sdl2_init() {
 		gmask = 0x0000ff00;
 		amask = 0xff000000;
 	#endif
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | (g_sys.audio ? SDL_INIT_AUDIO : 0));
 	SDL_ShowCursor(SDL_DISABLE);
 	_screen_w = _screen_h = 0;
 	memset(_screen_palette, 0, sizeof(_screen_palette));
@@ -425,7 +425,8 @@ static void handle_keyevent(int keysym, bool keydown, struct input_t *input, boo
 	case SDLK_p:
 		if (keydown) {
 			*paused = (bool)(*paused ? false : true);
-			SDL_PauseAudio(*paused);
+			if (g_sys.audio)
+				SDL_PauseAudio(*paused);
 		}
 		break;
 	}
@@ -500,7 +501,8 @@ static int handle_event(const SDL_Event *ev) {
 		case SDL_APPINPUTFOCUS:
 		case SDL_APPACTIVE:
 			g_sys.paused = (ev->active.gain == 0);
-			SDL_PauseAudio(g_sys.paused);
+			if (g_sys.audio)
+				SDL_PauseAudio(g_sys.paused);
 		}
 		break;
 	case SDL_KEYUP:
@@ -554,6 +556,8 @@ static uint32_t sdl2_get_timestamp() {
 }
 
 static void sdl2_start_audio(sys_audio_cb callback, void *param) {
+	if (!g_sys.audio)
+		return;
 	SDL_AudioSpec desired;
 	memset(&desired, 0, sizeof(desired));
 	desired.freq = SYS_AUDIO_FREQ;
@@ -568,15 +572,18 @@ static void sdl2_start_audio(sys_audio_cb callback, void *param) {
 }
 
 static void sdl2_stop_audio() {
-	SDL_CloseAudio();
+	if (g_sys.audio)
+		SDL_CloseAudio();
 }
 
 static void sdl2_lock_audio() {
-	SDL_LockAudio();
+	if (g_sys.audio)
+		SDL_LockAudio();
 }
 
 static void sdl2_unlock_audio() {
-	SDL_UnlockAudio();
+	if (g_sys.audio)
+		SDL_UnlockAudio();
 }
 
 static void render_load_sprites(int spr_type, int count, const struct sys_rect_t *r, const uint8_t *data, int w, int h, uint8_t color_key, bool update_pal) {
