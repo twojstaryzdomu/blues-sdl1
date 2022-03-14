@@ -65,6 +65,7 @@ Usage: blues [OPTIONS]...
   --palette=NUM     Pick palette NUM for screen colors
   --nomap           Do not scroll map before each level
   --jumpbtn=[ABXY]  Select controller button for jump (default 'A')
+  --nosound         Disable sound
 ```
 
 ## Downloads
