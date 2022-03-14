@@ -487,6 +487,11 @@ static void handle_controllerbutton(int button, bool pressed, struct input_t *in
 		g_sys.input.quit = true;
 		break;
 	case SDL_CONTROLLER_BUTTON_START:
+		if (pressed) {
+			g_sys.paused = (bool)(g_sys.paused ? false : true);
+			if (g_sys.audio)
+				SDL_PauseAudio(g_sys.paused);
+		}
 		break;
 	case SDL_CONTROLLER_BUTTON_DPAD_UP:
 		if (pressed) {
