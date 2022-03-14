@@ -44,6 +44,7 @@ static bool _hybrid_color;
 
 static SDL_GameController *_controller;
 static SDL_Joystick *_joystick;
+static int _controller_up;
 
 static int sdl2_init() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
@@ -62,6 +63,24 @@ static int sdl2_init() {
 				_controller = SDL_GameControllerOpen(i);
 				if (_controller) {
 					fprintf(stdout, "Using controller '%s'\n", SDL_GameControllerName(_controller));
+					switch (*g_sys.input.jump_button) {
+					case 'A':
+						_controller_up = SDL_CONTROLLER_BUTTON_A;
+						break;
+					case 'B':
+						_controller_up = SDL_CONTROLLER_BUTTON_B;
+						break;
+					case 'X':
+						_controller_up = SDL_CONTROLLER_BUTTON_X;
+						break;
+					case 'Y':
+						_controller_up = SDL_CONTROLLER_BUTTON_Y;
+						break;
+					default:
+						fprintf(stdout, "No such button available: %s\n", g_sys.input.jump_button);
+						continue;
+					}
+					fprintf(stdout, "Jump button: %s\n", g_sys.input.jump_button);
 					break;
 				}
 			}
@@ -448,6 +467,14 @@ static void handle_controlleraxis(int axis, int value, struct input_t *input) {
 }
 
 static void handle_controllerbutton(int button, bool pressed, struct input_t *input) {
+	if (button == _controller_up) {
+		if (pressed) {
+			input->direction |= INPUT_DIRECTION_UP;
+		} else {
+			input->direction &= ~INPUT_DIRECTION_UP;
+		}
+		return;
+	}
 	switch (button) {
 	case SDL_CONTROLLER_BUTTON_A:
 	case SDL_CONTROLLER_BUTTON_B:
@@ -546,7 +573,6 @@ static int handle_event(const SDL_Event *ev) {
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			g_sys.paused = (ev->window.event == SDL_WINDOWEVENT_FOCUS_LOST);
 			SDL_PauseAudio(g_sys.paused);
-			break;
 		}
 		break;
 	case SDL_KEYUP:

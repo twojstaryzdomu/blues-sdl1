@@ -20,6 +20,7 @@ struct input_t {
 	bool quit;
 	bool space;
 	bool digit1, digit2, digit3;
+	char jump_button[1];
 };
 
 typedef void (*sys_audio_cb)(void *, uint8_t *data, int len);

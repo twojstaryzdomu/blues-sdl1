@@ -27,7 +27,10 @@ static const char *USAGE =
 	"  --hybrid          Enable fuchsia color as in Hybrid crack\n"
 	"  --palette=NUM     Pick palette NUM for screen colors\n"
 	"  --nomap           Do not scroll map before each level\n"
+	"  --jumpbtn=[ABXY]  Select controller button for jump (default 'A')\n"
 ;
+
+static const char *DEFAULT_JUMP_BUTTON = "A";
 
 static struct game_t *detect_game(const char *data_path) {
 #if 0
@@ -67,6 +70,7 @@ int main(int argc, char *argv[]) {
 	const char *data_path = DEFAULT_DATA_PATH;
 	int scale_factor = DEFAULT_SCALE_FACTOR;
 	const char *scale_filter = DEFAULT_SCALE_FILTER;
+	strcpy(g_sys.input.jump_button, DEFAULT_JUMP_BUTTON);
 	bool fullscreen = false;
 	if (argc == 2) {
 		struct stat st;
@@ -90,6 +94,7 @@ int main(int argc, char *argv[]) {
 			{ "hybrid",     no_argument,       0, 12 },
 			{ "palette",    required_argument, 0, 13 },
 			{ "nomap",      no_argument,       0, 14 },
+			{ "jumpbtn",    required_argument, 0, 15 },
 			{ 0, 0, 0, 0 },
 		};
 		int index;
@@ -144,6 +149,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 14:
 			g_options.show_map = false;
+			break;
+		case 15:
+			sscanf(optarg, "%s", g_sys.input.jump_button);
 			break;
 		default:
 			fprintf(stdout, USAGE, argv[0]);
