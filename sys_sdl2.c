@@ -41,6 +41,7 @@ static uint32_t *_screen_buffer;
 static int _copper_color_key;
 static uint32_t _copper_palette[COPPER_BARS_H];
 static bool _hybrid_color;
+static bool _fullscreen;
 
 static SDL_GameController *_controller;
 static SDL_Joystick *_joystick;
@@ -377,8 +378,8 @@ static void sdl2_shake_screen(int dx, int dy) {
 	_shake_dy = dy;
 }
 
-static void handle_keyevent(int keysym, bool keydown, struct input_t *input, bool *paused) {
-	switch (keysym) {
+static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input_t *input, bool *paused) {
+	switch (keysym->sym) {
 	case SDLK_LEFT:
 		if (keydown) {
 			input->direction |= INPUT_DIRECTION_LEFT;
@@ -408,6 +409,15 @@ static void handle_keyevent(int keysym, bool keydown, struct input_t *input, boo
 		}
 		break;
 	case SDLK_RETURN:
+		if (keydown) {
+			switch(keysym->mod) {
+			case KMOD_LALT:
+				_fullscreen = !_fullscreen;
+				SDL_SetWindowFullscreen(_window, (_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP));
+				SDL_ShowCursor(_fullscreen);
+			}
+		}
+		break;
 	case SDLK_SPACE:
 		input->space = keydown;
 		break;
@@ -582,10 +592,10 @@ static int handle_event(const SDL_Event *ev) {
 		}
 		break;
 	case SDL_KEYUP:
-		handle_keyevent(ev->key.keysym.sym, 0, &g_sys.input, &g_sys.paused);
+		handle_keyevent(&ev->key.keysym, 0, &g_sys.input, &g_sys.paused);
 		break;
 	case SDL_KEYDOWN:
-		handle_keyevent(ev->key.keysym.sym, 1, &g_sys.input, &g_sys.paused);
+		handle_keyevent(&ev->key.keysym, 1, &g_sys.input, &g_sys.paused);
 		break;
 	case SDL_CONTROLLERDEVICEADDED:
 		if (!_controller) {
