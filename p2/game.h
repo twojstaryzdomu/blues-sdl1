@@ -12,6 +12,16 @@ extern struct options_t g_options;
 #define TILEMAP_SCREEN_H (GAME_SCREEN_H - PANEL_H)
 #define TILEMAP_SCROLL_W  64
 
+#define STRING_W 8
+#define STRING_H 12
+#define PANEL_NUMBER_W 16
+#define PANEL_NUMBER_H 12
+#define NUMBER_W 16
+#define NUMBER_H 11
+#define STRING_SPR_W 16
+#define STRING_SPR_H 11
+#define CHARACTER_OFFSET 241
+
 #define CHEATS_NO_HIT           (1 << 0)
 #define CHEATS_UNLIMITED_LIFES  (1 << 1)
 #define CHEATS_UNLIMITED_ENERGY (1 << 2)
