@@ -107,6 +107,21 @@ void video_draw_string2(int offset, const char *s) {
 	}
 }
 
+void video_draw_centred_string(const char *s) {
+	int l = strlen(s);
+	int x = (TILEMAP_SCREEN_W - STRING_SPR_W * l) / 2;
+	int y = (TILEMAP_SCREEN_H - STRING_SPR_H) / 2;
+	const int uppercase_offset = 65;
+	g_sys.render_set_sprites_clipping_rect(x, y, STRING_SPR_W * l, STRING_SPR_H);
+	while (*s) {
+		const uint8_t chr = *s++;
+		if (chr != ' ') {
+			video_draw_sprite(CHARACTER_OFFSET + chr - uppercase_offset, x, y, 0);
+		}
+		x += STRING_SPR_W;
+	}
+}
+
 void video_clear() {
 	memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
 }

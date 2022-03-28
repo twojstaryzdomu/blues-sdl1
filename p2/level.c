@@ -3827,9 +3827,10 @@ static void level_pause() {
 			level_draw_panel();
 		}
 		while (g_sys.paused){
-			video_draw_string2(0xC16, "PAUSED");
+			video_draw_centred_string("PAUSED");
 			level_sync();
 		}
+		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 		level_update_player();
 		level_update_tilemap();
 		print_debug(DBG_SYSTEM, "Resuming");
