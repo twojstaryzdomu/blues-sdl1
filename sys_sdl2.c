@@ -263,28 +263,26 @@ static void sdl2_fade_out_palette() {
 }
 
 static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transition_e type, bool open) {
-	const int step_w = s->w / FADE_STEPS;
-	const int step_h = s->h / FADE_STEPS;
-	print_debug(DBG_SYSTEM, "sdl2_transition_screen: s->w = %d, s->h = %d, step_w = %d; step_h = %d", s->w, s->h, step_w, step_h);
+	const int step_w = s->w / (FADE_STEPS + 1);
+	const int step_h = s->h / (FADE_STEPS + 1) * s->w / s->h;
+	print_debug(DBG_SYSTEM, "sdl2_transition_screen: FADE_STEPS = %d; s->w = %d, s->h = %d, step_w = %d; step_h = %d", FADE_STEPS, s->w, s->h, step_w, step_h);
 	SDL_Rect b = { .x = 0, .y = 0, .h = s->h, .w = s->w };
 	SDL_Rect r;
 	r.x = 0;
 	r.w = 0;
 	r.y = 0;
+	int step = 0;
 	r.h = (type == TRANSITION_CURTAIN) ? s->h : 0;
 	do {
-		if(open) {
-			r.x = (s->w - r.w) / 2;
-			if (r.x < 0) {
-				r.x = 0;
-			}
+		if (open) {
 			r.w += step_w;
+			r.x = (s->w - r.w) / 2;
 		} else {
 			r.w = s->w;
-			r.y += step_h;
-			r.h -= r.h > step_h ? step_h * 2 : r.h;
-			SDL_FillRect(_renderer, &b, 0);
+			r.y += step_h / 2 + step_h % 2;
+			r.h -= MIN(step_h, r.h);
 		}
+		SDL_FillRect(_renderer, &b, 0);
 		if (type == TRANSITION_SQUARE) {
 			r.y = (s->h - r.h) / 2;
 			if (r.y < 0) {
@@ -295,11 +293,12 @@ static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transiti
 				r.h = s->h - r.y;
 			}
 		}
-		print_debug(DBG_SYSTEM, "sdl2_transition_screen: %d,%d-%d,%d, %d", r.x, r.y, r.w, r.h, open);
+		step += 1;
+		print_debug(DBG_SYSTEM, "sdl2_transition_screen: %d,%d-%d,%d, r.w = %d, r.h = %d, open = %d, step = %d", r.x, r.y, r.x + r.w, r.y + r.h, r.w, r.h, open, step);
 		SDL_BlitSurface(_texture, &r, _renderer, &r);
 		SDL_Flip(_renderer);
 		SDL_Delay(30);
-	} while (((r.x > 0 && open) || (r.y < s->h / 2 && !open)) && (type == TRANSITION_CURTAIN || r.y > 0));
+	} while (((r.x > r.x % step_w && open) || (r.y < s->h / 2 && !open)) && (type == TRANSITION_CURTAIN || r.y > r.y % step_h));
 	SDL_FreeSurface(_texture);
 }
 
