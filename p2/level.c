@@ -3817,25 +3817,26 @@ void do_demo_animation() {
 }
 
 static void level_pause() {
-	while(1) {
-		if (!g_sys.paused) {
-			break;
-		} else {
-			print_debug(DBG_SYSTEM, "Pausing");
-			video_transition_close();
-			video_clear();
-			level_draw_panel();
-		}
-		while (g_sys.paused){
-			video_draw_centred_string("PAUSED");
-			level_sync();
-		}
-		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
-		level_update_player();
-		level_update_tilemap();
-		print_debug(DBG_SYSTEM, "Resuming");
-		video_transition_open();
+	if (!g_sys.paused) {
+		return;
 	}
+	print_debug(DBG_SYSTEM, "Pausing");
+	video_transition_close();
+	video_clear();
+	level_draw_panel();
+	video_draw_centred_string("PAUSED");
+	g_sys.update_screen(g_res.vga, 1);
+	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
+	while (g_sys.paused) {
+		update_input();
+		g_sys.sleep(MAX(diff, 10));
+		g_vars.timestamp = g_sys.get_timestamp();
+	}
+	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+	level_update_player();
+	level_update_tilemap();
+	video_transition_open();
+	print_debug(DBG_SYSTEM, "Resuming");
 }
 
 void do_level() {
