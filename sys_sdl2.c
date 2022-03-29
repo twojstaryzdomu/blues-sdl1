@@ -241,8 +241,7 @@ static void fade_palette_helper(int in) {
 		}
 		Uint32 color = SDL_MapRGBA(surface->format, component, component, component, alpha);
 		SDL_FillRect(surface, 0, color);
-		if (_texture)
-			SDL_BlitSurface(_texture, 0, _renderer, 0);
+		SDL_BlitSurface(_texture, 0, _renderer, 0);
 		SDL_BlitSurface(surface, 0, _renderer, 0);
 		SDL_Flip(_renderer);
 		SDL_Delay(30);
@@ -299,7 +298,6 @@ static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transiti
 		SDL_Flip(_renderer);
 		SDL_Delay(30);
 	} while (((r.x > r.x % step_w && open) || (r.y < s->h / 2 && !open)) && (type == TRANSITION_CURTAIN || r.y > r.y % step_h));
-	SDL_FreeSurface(_texture);
 }
 
 static void sdl2_update_screen(const uint8_t *p, int present) {
@@ -322,7 +320,7 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 			_screen_buffer[i] = _screen_palette[p[i]];
 		}
 	}
-	// source of largest memory leak: SDL_ConvertSurface creates a copy of surface, it needs to be cleared later
+	SDL_FreeSurface(_texture);
 	_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, _screen_w, _screen_h, 32, _screen_w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
 	if (present) {
 		SDL_Rect r={_shake_dx, _shake_dy, _screen_w, _screen_h};
@@ -363,8 +361,6 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 		SDL_SetClipRect(_renderer, 0);
 
 		SDL_Flip(_renderer);
-		// added to avoid a memory leak
-		SDL_FreeSurface(_texture);
 	}
 }
 
