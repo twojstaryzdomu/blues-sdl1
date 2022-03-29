@@ -37,11 +37,11 @@ The data files of the DOS version, full game or [demo](http://cd.textfiles.com/c
 
 ## Changes
 
-Compared to the original DOS executables, the rewritten engines feature :
+Compared to the original DOS executables, the rewritten engines feature:
 
 - horizontal scrolling
 - configurable screen size
-- game cheats : unlimited lifes and energy, no hit
+- game cheats: unlimited lifes and energy, no hit
 - game pad support with a user-defined jump button
 
 ## Running
