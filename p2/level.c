@@ -3841,6 +3841,7 @@ static void level_pause() {
 
 void do_level() {
 	static const uint8_t music_tbl[] = { 9, 9, 0, 0, 0, 13, 4, 4, 10, 13, 16, 16, 16, 9, 14, 4 };
+	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 	play_music(music_tbl[g_vars.level_num]);
 	load_level_data(g_vars.level_num);
 	set_level_palette();
