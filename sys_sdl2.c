@@ -29,7 +29,7 @@ static struct sprite_t _sprites[MAX_SPRITES];
 static int _sprites_count;
 static SDL_Rect _sprites_cliprect;
 
-static int _screen_w, _screen_h;
+static int _window_w, _window_h;
 static int _shake_dx, _shake_dy;
 static SDL_Window *_window;
 static SDL_Renderer *_renderer;
@@ -40,8 +40,18 @@ static uint32_t _screen_palette[256];
 static uint32_t *_screen_buffer;
 static int _copper_color_key;
 static uint32_t _copper_palette[COPPER_BARS_H];
-static bool _hybrid_color;
+static const char *_caption;
+static int8_t _scale;
+static const char *_filter;
 static bool _fullscreen;
+static bool _hybrid_color;
+
+static int _orig_w, _orig_h;
+static int8_t _orig_scale;
+static bool _size_lock;
+static bool _orig_fullscreen;
+static char const *_orig_filter;
+static bool _orig_color;
 
 static SDL_GameController *_controller;
 static SDL_Joystick *_joystick;
@@ -50,7 +60,7 @@ static int _controller_up;
 static int sdl2_init() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | (g_sys.audio ? SDL_INIT_AUDIO : 0));
 	SDL_ShowCursor(SDL_DISABLE);
-	_screen_w = _screen_h = 0;
+	g_sys.w = g_sys.h = _orig_w = _orig_h = 0;
 	memset(_screen_palette, 0, sizeof(_screen_palette));
 	_palette = SDL_AllocPalette(256);
 	_screen_buffer = 0;
@@ -130,9 +140,23 @@ static void sdl2_fini() {
 }
 
 static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, const char *filter, bool fullscreen, bool hybrid_color) {
-	assert(_screen_w == 0 && _screen_h == 0); // abort if called more than once
-	_screen_w = w;
-	_screen_h = h;
+	_window_w = w;
+	_window_h = h;
+	_caption = caption;
+	_filter = filter;
+	const int screen_w = MAX(w / scale, 320);
+	const int screen_h = MAX(h / scale, 200);
+	if (screen_w * scale <= _window_w && screen_h * scale <= _window_h) {
+		_scale = MAX(scale, 1);
+	} else {
+		_scale = MAX(_scale - 1, 1);
+		print_warning("Unable to fit %dx scaled %dx%d screen within %dx%d window bounds", scale, screen_w, screen_h, _window_w, _window_h, _scale);
+		return; // refuse to resize when not possible to fit window within bounds
+	}
+	if (!_size_lock) {
+		g_sys.w = screen_w;
+		g_sys.h = screen_h;
+	}
 	if (!filter || strcmp(filter, "nearest") == 0) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 	} else if (strcmp(filter, "linear") == 0) {
@@ -140,24 +164,59 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	} else {
 		print_warning("Unhandled filter '%s'", filter);
 	}
-	const int window_w = w * scale;
-	const int window_h = h * scale;
+	if (!_orig_w) {
+		_orig_w = _window_w;
+		_orig_h = _window_h;
+		_orig_scale = _scale;
+		_orig_fullscreen = _fullscreen;
+		_orig_filter = _filter;
+		_orig_color = _hybrid_color;
+		fprintf(stderr, "Original window size %dx%d, scale %d, fullscreen %d, filter %s, color %d\n", _orig_w, _orig_h, _orig_scale, _orig_fullscreen, _orig_filter, _orig_color);
+	}
 	const int flags = fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE;
-	_window = SDL_CreateWindow(caption, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, window_w, window_h, flags);
-	_renderer = SDL_CreateRenderer(_window, -1, 0);
-	SDL_RenderSetLogicalSize(_renderer, w, h);
-	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", _screen_w, _screen_h);
-	_screen_buffer = (uint32_t *)calloc(_screen_w * _screen_h, sizeof(uint32_t));
+	if (!_window) {
+		_window = SDL_CreateWindow(caption, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_w, _window_h, flags);
+	} else {
+		bool is_fullscreen = SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		fprintf(stderr, "%s change to %s\n", is_fullscreen ? "Fullscreen" : "Window", fullscreen ? "fullscreen" : "window");
+		if (is_fullscreen != fullscreen) {
+			SDL_SetWindowFullscreen(_window, fullscreen);
+			_fullscreen = fullscreen;
+		}
+		int window_w, window_h;
+		SDL_GetWindowSize(_window, &window_w, &window_h);
+		fprintf(stderr, "Existing window size: %dx%d\n", window_w, window_h);
+		if ((window_w != _window_w || window_h != _window_h) && !is_fullscreen) {
+			SDL_SetWindowSize(_window, _window_w, _window_h);
+			SDL_GetWindowSize(_window, &window_w, &window_w);
+			fprintf(stderr, "Restored window size: %dx%d\n", window_w, window_w);
+		}
+	}
+	if (!_renderer) {
+		_renderer = SDL_CreateRenderer(_window, -1, 0);
+	} else {
+		SDL_RenderSetLogicalSize(_renderer, g_sys.w, g_sys.h);
+	}
+	SDL_RenderSetScale(_renderer, _scale, _scale);
+	fprintf(stderr, "Window size: %dx%d, game size: %dx%d, scale: %d\n", _window_w, _window_h, g_sys.w, g_sys.h, _scale);
+	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", w, h);
+	if (_screen_buffer)
+		free(_screen_buffer);
+	_screen_buffer = (uint32_t *)calloc(g_sys.w * g_sys.h, sizeof(uint32_t));
 	if (!_screen_buffer) {
 		print_error("Failed to allocate screen buffer");
 	}
+	if (_texture) {
+		SDL_DestroyTexture(_texture);
+	}
 	static const uint32_t pfmt = SDL_PIXELFORMAT_RGB888;
-	_texture = SDL_CreateTexture(_renderer, pfmt, SDL_TEXTUREACCESS_STREAMING, _screen_w, _screen_h);
-	_fmt = SDL_AllocFormat(pfmt);
+	_texture = SDL_CreateTexture(_renderer, pfmt, SDL_TEXTUREACCESS_STREAMING, g_sys.w, g_sys.h);
+	if (!_fmt)
+		_fmt = SDL_AllocFormat(pfmt);
 	_sprites_cliprect.x = 0;
 	_sprites_cliprect.y = 0;
-	_sprites_cliprect.w = w;
-	_sprites_cliprect.h = h;
+	_sprites_cliprect.w = g_sys.w;
+	_sprites_cliprect.h = g_sys.h;
 	_hybrid_color = hybrid_color;
 }
 
@@ -317,33 +376,47 @@ static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transiti
 	} while (((r.x > r.x % step_w && open) || (r.y < s->h / 2 && !open)) && (type == TRANSITION_CURTAIN || r.y > r.y % step_h));
 }
 
+static void sdl2_resize_screen() {
+	sdl2_set_screen_size(_window_w, _window_h, _caption, _scale, _filter, _fullscreen, _hybrid_color);
+}
+
+static void sdl2_rescale_screen(int n) {
+	if (_scale > 1 || n > 0) {
+		fprintf(stderr, "Scale %d, ", _scale);
+		_scale += n;
+		fprintf(stderr, "%screasing to %d\n", n > 0 ? "in" : "de", abs(_scale));
+		g_sys.resize = true;
+		g_sys.resize_screen();
+	}
+}
+
 static void sdl2_update_screen(const uint8_t *p, int present) {
 	if (_copper_color_key != -1) {
-		for (int j = 0; j < _screen_h; ++j) {
+		for (int j = 0; j < g_sys.h; ++j) {
 			if (j / 2 < COPPER_BARS_H) {
 				const uint32_t line_color = _copper_palette[j / 2];
-				for (int i = 0; i < _screen_w; ++i) {
-					_screen_buffer[j * _screen_w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
+				for (int i = 0; i < g_sys.w; ++i) {
+					_screen_buffer[j * g_sys.w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
 				}
 			} else {
-				for (int i = 0; i < _screen_w; ++i) {
-					_screen_buffer[j * _screen_w + i] = _screen_palette[p[i]];
+				for (int i = 0; i < g_sys.w; ++i) {
+					_screen_buffer[j * g_sys.w + i] = _screen_palette[p[i]];
 				}
 			}
-			p += _screen_w;
+			p += g_sys.w;
 		}
 	} else {
-		for (int i = 0; i < _screen_w * _screen_h; ++i) {
+		for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
 			_screen_buffer[i] = _screen_palette[p[i]];
 		}
 	}
-	SDL_UpdateTexture(_texture, 0, _screen_buffer, _screen_w * sizeof(uint32_t));
+	SDL_UpdateTexture(_texture, 0, _screen_buffer, g_sys.w * sizeof(uint32_t));
 	if (present) {
 		SDL_Rect r;
 		r.x = _shake_dx;
 		r.y = _shake_dy;
-		r.w = _screen_w;
-		r.h = _screen_h;
+		r.w = g_sys.w;
+		r.h = g_sys.h;
 		SDL_RenderClear(_renderer);
 		SDL_RenderCopy(_renderer, _texture, 0, &r);
 
@@ -412,8 +485,11 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 			switch(keysym->mod) {
 			case KMOD_LALT:
 				_fullscreen = !_fullscreen;
-				SDL_SetWindowFullscreen(_window, (_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP));
+				fprintf(stderr, "Toggling fullscreen to %s\n", _fullscreen ? "on" : "off");
+				g_sys.resize = true;
+				g_sys.resize_screen();
 				SDL_ShowCursor(_fullscreen);
+				print_debug(DBG_SYSTEM, "Fullscreen is %s", _fullscreen ? "on" : "off");
 			}
 		}
 		break;
@@ -434,6 +510,23 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 	case SDLK_3:
 		input->digit3 = keydown;
 		break;
+	case SDLK_d:
+		if (keydown)
+			sdl2_rescale_screen(-1);
+		break;
+	case SDLK_i:
+		if (keydown)
+			sdl2_rescale_screen(1);
+		break;
+	case SDLK_o:
+		if (keydown) {
+			fprintf(stderr, "Restoring original window size %dx%d, scale %d, fullscreen %d\n", _orig_w, _orig_h, _orig_scale, _orig_fullscreen);
+			SDL_RestoreWindow(_window);
+			g_sys.resize = true;
+			_size_lock = false;
+			sdl2_set_screen_size(_orig_w, _orig_h, _caption, _orig_scale, _orig_filter, _orig_fullscreen, _orig_color);
+		}
+		break;
 	case SDLK_p:
 		if (keydown) {
 			*paused = (bool)(*paused ? false : true);
@@ -441,6 +534,20 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 				SDL_PauseAudio(*paused);
 		}
 		break;
+	case SDLK_s:
+		if (keydown) {
+			_size_lock = !_size_lock;
+			fprintf(stderr, "Screen size is %s\n", _size_lock ? "locked" : "unlocked");
+		}
+		break;
+	case SDLK_t:
+		if (keydown) {
+			_scale = (_scale == _orig_scale ? 1 : _orig_scale);
+			fprintf(stderr, "Toggling scale to %d\n", _scale);
+			SDL_GetWindowSize(_window, &g_sys.w, &g_sys.h);
+			g_sys.resize = true;
+			g_sys.resize_screen();
+		}
 	}
 }
 
@@ -578,6 +685,7 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 }
 
 static int handle_event(const SDL_Event *ev) {
+	int window_w, window_h;
 	switch (ev->type) {
 	case SDL_QUIT:
 		g_sys.input.quit = true;
@@ -588,6 +696,32 @@ static int handle_event(const SDL_Event *ev) {
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			g_sys.paused = (ev->window.event == SDL_WINDOWEVENT_FOCUS_LOST);
 			SDL_PauseAudio(g_sys.paused);
+			break;
+		case SDL_WINDOWEVENT_MINIMIZED:
+			fprintf(stderr, "Window minimized");
+		case SDL_WINDOWEVENT_SIZE_CHANGED:
+			if (ev->window.data1 && ev->window.data2) {
+				fprintf(stderr, "Size changed from %dx%d to %dx%d, scale %d\n", _window_w, _window_h, ev->window.data1, ev->window.data2, _scale);
+				if (_window_w != ev->window.data1 || _window_h != ev->window.data2) {
+					if (!_size_lock) {
+						_window_w = ev->window.data1;
+						_window_h = ev->window.data2;
+						g_sys.resize = true;
+						g_sys.resize_screen();
+					} else {
+						fprintf(stderr, "Scaling is locked\n");
+					}
+				} else {
+					fprintf(stderr, "No change needed\n");
+				}
+			} else {
+				fprintf(stderr, " and bad %dx%d size ignored\n", ev->window.data1, ev->window.data2);
+			}
+			break;
+		case SDL_WINDOWEVENT_RESIZED:
+			SDL_GetWindowSize(_window, &window_w, &window_h);
+			fprintf(stderr, "Resize completed to %dx%d, scale %d\n", window_w, window_h, _scale);
+			break;
 		}
 		break;
 	case SDL_KEYUP:
@@ -773,6 +907,7 @@ struct sys_t g_sys = {
 	.set_palette_color = sdl2_set_palette_color,
 	.fade_in_palette = sdl2_fade_in_palette,
 	.fade_out_palette = sdl2_fade_out_palette,
+	.resize_screen = sdl2_resize_screen,
 	.update_screen = sdl2_update_screen,
 	.shake_screen = sdl2_shake_screen,
 	.transition_screen = sdl2_transition_screen,

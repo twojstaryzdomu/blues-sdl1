@@ -15,6 +15,12 @@
 #define RENDER_SPR_LEVEL 1 /* level sprites */
 #define RENDER_SPR_FG    2 /* foreground tiles */
 
+#define FULLSCREEN_W 640
+#define FULLSCREEN_H 360
+
+#define GAME_SCREEN_W g_sys.w
+#define GAME_SCREEN_H g_sys.h
+
 struct input_t {
 	uint8_t direction;
 	bool quit;
@@ -46,6 +52,7 @@ struct sys_t {
 	void	(*set_palette_color)(int i, const uint8_t *colors);
 	void	(*fade_in_palette)();
 	void	(*fade_out_palette)();
+	void	(*resize_screen)();
 	void	(*update_screen)(const uint8_t *p, int present);
 	void	(*shake_screen)(int dx, int dy);
 	void	(*transition_screen)(const struct sys_rect_t *s, enum sys_transition_e type, bool open);
@@ -63,6 +70,8 @@ struct sys_t {
 	void	(*render_set_sprites_clipping_rect)(int x, int y, int w, int h);
 	bool	paused;
 	bool	audio;
+	bool	resize;
+	int	w, h;
 };
 
 extern struct sys_t g_sys;

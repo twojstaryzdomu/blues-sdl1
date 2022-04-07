@@ -6,6 +6,8 @@
 #include "sys.h"
 #include "util.h"
 
+bool _screen_transition_flag = true;
+
 static const uint16_t _copper_data[18 * MAX_LEVELS] = {
 	0x190,0x00a,0x00b,0x00c,0x00d,0x00e,0x00f,0x01f,0x02f,0x03f,0x04f,0x05f,0x06f,0x07f,0x08f,0x09f,0x0af,0x0bf,
 	0x190,0x35c,0x15c,0x25c,0x35c,0x45c,0x55c,0x65b,0x75a,0x859,0x958,0xa57,0xb56,0xc55,0xd54,0xe53,0xf54,0xf64,
@@ -273,8 +275,8 @@ static void init_level() {
 }
 
 static void do_level_redraw_tilemap(int xpos, int ypos) {
-	const int w = (TILEMAP_SCREEN_W / 16) + ((!g_options.dos_scrolling && (xpos & 15) != 0) ? 1 : 0);
-	const int h = (TILEMAP_SCREEN_H / 16) + ((!g_options.dos_scrolling && (ypos & 15) != 0) ? 1 : 0);
+	const int w = (TILEMAP_SCREEN_W / 16) + ((!g_options.dos_scrolling && (xpos & 15) != 0) ? 2 : 1);
+	const int h = (TILEMAP_SCREEN_H / 16) + ((!g_options.dos_scrolling && (ypos & 15) != 0) ? 2 : 1);
 	const int y = ypos >> 4;
 	const int x = xpos >> 4;
 	for (int j = 0; j < h; ++j) {
@@ -297,8 +299,8 @@ static void do_level_update_tiles_anim() {
 			++p[0];
 		}
 	}
-	const int w = (TILEMAP_SCREEN_W / 16) + ((!g_options.dos_scrolling && (g_vars.screen_tilemap_xorigin & 15) != 0) ? 1 : 0);
-	const int h = (TILEMAP_SCREEN_H / 16) + ((!g_options.dos_scrolling && (g_vars.screen_tilemap_yorigin & 15) != 0) ? 1 : 0);
+	const int w = (TILEMAP_SCREEN_W / 16) + ((!g_options.dos_scrolling && (g_vars.screen_tilemap_xorigin & 15) != 0) ? 2 : 1);
+	const int h = (TILEMAP_SCREEN_H / 16) + ((!g_options.dos_scrolling && (g_vars.screen_tilemap_yorigin & 15) != 0) ? 2 : 1);
 	const int y = g_vars.screen_tilemap_yorigin >> 4;
 	const int x = g_vars.screen_tilemap_xorigin >> 4;
 	for (int j = 0; j < h; ++j) {
@@ -2094,6 +2096,8 @@ void do_level() {
 	}
 	g_vars.switch_player_scrolling_flag = 0;
 	init_level();
+	screen_init();
+	screen_resize();
 	screen_clear(0);
 	do_level_redraw_tilemap(g_vars.screen_tilemap_xorigin, g_vars.screen_tilemap_yorigin);
 	if (g_options.amiga_copper_bars) {
@@ -2108,7 +2112,6 @@ void do_level() {
 	g_vars.player2_scrolling_flag = 0;
 	g_vars.found_music_instrument_flag = 0;
 	g_sys.render_set_sprites_clipping_rect(0, TILEMAP_OFFSET_Y, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
-	bool screen_transition_flag = true;
 	do {
 		const uint32_t timestamp = g_sys.get_timestamp();
 		update_input();
@@ -2130,6 +2133,13 @@ void do_level() {
 			while (g_vars.inp_keyboard[0xC4] != 0 && g_vars.inp_keyboard[0xB] != 0);
 		}
 		// demo
+		if (g_sys.resize) {
+			screen_resize();
+			screen_init();
+			g_sys.render_set_sprites_clipping_rect(0, TILEMAP_OFFSET_Y, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+			do_level_redraw_tilemap(g_vars.screen_tilemap_xorigin, g_vars.screen_tilemap_yorigin);
+			_screen_transition_flag = true;
+		}
 		do_level_update_scrolling2();
 		do_level_update_objects();
 		if (!g_res.amiga_data) {
@@ -2138,8 +2148,8 @@ void do_level() {
 		++g_vars.level_loop_counter;
 		draw_level_panel();
 
-		if (screen_transition_flag) {
-			screen_transition_flag = false;
+		if (_screen_transition_flag) {
+			_screen_transition_flag = false;
 			g_sys.update_screen(g_res.vga, 0);
 			screen_do_transition2();
 		} else {
@@ -2157,6 +2167,6 @@ void do_level() {
 	if (g_options.amiga_copper_bars) {
 		g_sys.set_copper_bars(0);
 	}
-	g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, GAME_SCREEN_H);
+	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 	g_vars.inp_keyboard[0xBF] = 0;
 }

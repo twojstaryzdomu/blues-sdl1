@@ -122,8 +122,23 @@ void video_draw_centred_string(const char *s) {
 	}
 }
 
+void video_resize() {
+	if (g_sys.resize) {
+		free(g_res.vga);
+		g_res.vga = (uint8_t *)calloc(GAME_SCREEN_W * GAME_SCREEN_H, 1);
+		if (!g_res.vga) {
+			print_error("Failed to reallocate vga buffer, %d bytes", GAME_SCREEN_W * GAME_SCREEN_H);
+		}
+		g_sys.resize = false;
+	}
+}
+
 void video_clear() {
-	memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+	if (g_sys.resize) {
+		video_resize();
+	} else {
+		memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+	}
 }
 
 void video_copy_img(const uint8_t *src) {
@@ -134,8 +149,16 @@ void video_copy_map(const uint8_t *src) {
 	decode_planar(src, g_res.map, MAP_W, MAP_W, MAP_H, 0xFF);
 }
 
+void video_copy_centred(uint8_t *src, int w, int h) {
+	int y_offs = (GAME_SCREEN_H - h) / 2;
+	int x_offs = (GAME_SCREEN_W - w) / 2;
+	for (int y = 0; y < h; ++y) {
+		memcpy(g_res.vga + (y_offs + y) * GAME_SCREEN_W + x_offs, src + y * w, w);
+	}
+}
+
 void video_draw_panel(const uint8_t *src) {
-	const int h = GAME_SCREEN_H - PANEL_H;
+	const int h = TILEMAP_SCREEN_H;
 	const int x = (GAME_SCREEN_W - 320) / 2;
 	decode_planar(src, g_res.vga + h * GAME_SCREEN_W + x, GAME_SCREEN_W, 320, PANEL_H - 1, 0xFF);
 }
@@ -224,13 +247,12 @@ void video_transition_close() {
 	s.w = TILEMAP_SCREEN_W;
 	g_sys.update_screen(g_res.vga, 0);
 	g_sys.transition_screen(&s, TRANSITION_CURTAIN, false);
-	video_clear();
 }
 
 void video_transition_open() {
 	print_debug(DBG_SYSTEM, "video_transition_open");
 	struct sys_rect_t s;
-	s.h = TILEMAP_SCREEN_H;
+	s.h = g_sys.resize ? GAME_SCREEN_H : TILEMAP_SCREEN_H;
 	s.w = TILEMAP_SCREEN_W;
 	g_sys.update_screen(g_res.vga, 0);
 	g_sys.transition_screen(&s, TRANSITION_CURTAIN, true);

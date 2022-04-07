@@ -21,6 +21,8 @@ static const uint8_t _colors_cga[] = {
 
 struct vars_t g_vars;
 
+int offset_x, offset_y;
+
 void update_input() {
 	g_sys.process_events();
 	g_vars.inp_key_left = ((g_sys.input.direction & INPUT_DIRECTION_LEFT) != 0) || g_vars.inp_keyboard[0x4B] || g_vars.inp_keyboard[0x7A];
@@ -33,15 +35,19 @@ void update_input() {
 
 static void do_title_screen() {
 	const uint32_t timestamp = g_sys.get_timestamp() + 20 * 1000;
-	load_img(g_res.amiga_data ? "blues.lbm" : "pres.sqz", GAME_SCREEN_W, g_options.cga_colors ? 0 : -1);
-	g_sys.fade_in_palette();
 	do {
-		update_input();
-		if (g_sys.input.space || g_sys.input.quit) {
-			break;
-		}
-		g_sys.sleep(10);
-	} while (g_sys.get_timestamp() < timestamp);
+		screen_resize();
+		load_img(g_res.amiga_data ? "blues.lbm" : "pres.sqz", GAME_SCREEN_W, g_options.cga_colors ? 0 : -1);
+		screen_copy_centred(g_res.vga, 320, 200);
+		g_sys.fade_in_palette();
+		do {
+			update_input();
+			if (g_sys.input.space || g_sys.input.quit || g_sys.resize) {
+				break;
+			}
+			g_sys.sleep(10);
+		} while (g_sys.get_timestamp() < timestamp);
+	} while (g_sys.resize);
 	play_sound(SOUND_0);
 	fade_out_palette();
 	g_sys.input.space = 0;
@@ -74,146 +80,155 @@ static void do_select_player() {
 	int frame2 = 1;
 	const int color_rgb = 2;
 	const int colors_count = 25;
-	load_img(g_res.amiga_data ? "choix.lbm" : "choix.sqz", GAME_SCREEN_W, g_options.cga_colors ? 1 : -1);
-	if (g_res.spr_count <= SPRITES_COUNT) {
-		screen_load_graphics(g_options.cga_colors ? g_res.cga_lut_sqv : 0, 0);
-	}
-	screen_clear_sprites();
 	do {
-		update_input();
-		const uint32_t timestamp = g_sys.get_timestamp();
-		switch (state) {
-		case 0:
-			screen_add_sprite(95, 155, animframe_0135[frame1]);
-			if (frame1 < animframe_0135[0]) {
-				++frame1;
-			} else {
-				frame1 = 1;
-			}
-			screen_add_sprite(190, 155, animframe_01d5[frame2]);
-			if (frame2 < animframe_01d5[0]) {
-				++frame2;
-			} else {
-				frame2 = 1;
-			}
-			g_vars.two_players_flag = 0;
-			level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER1] = PLAYER_JAKE;
-			level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER2] = 100;
-			g_vars.player = PLAYER_JAKE;
-			if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
-				g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
-				for (int i = 0; i < colors_count; ++i) {
-					screen_adjust_palette_color( 2, color_rgb,  1);
-					screen_adjust_palette_color( 9, color_rgb,  1);
-					screen_adjust_palette_color( 3, color_rgb, -1);
-					screen_adjust_palette_color(10, color_rgb, -1);
+		screen_resize();
+		screen_init();
+		offset_x = (GAME_SCREEN_W > 320) ? (GAME_SCREEN_W - 320) / 2 : 0;
+		offset_y = (GAME_SCREEN_H > 200) ? (GAME_SCREEN_H - 200) / 2 : 0;
+		load_img(g_res.amiga_data ? "choix.lbm" : "choix.sqz", GAME_SCREEN_W, g_options.cga_colors ? 1 : -1);
+		screen_copy_centred(g_res.vga, 320, 200);
+		if (g_res.spr_count <= SPRITES_COUNT) {
+			screen_load_graphics(g_options.cga_colors ? g_res.cga_lut_sqv : 0, 0);
+		}
+		screen_clear_sprites();
+		do {
+			update_input();
+			if (g_sys.resize)
+				break;
+			const uint32_t timestamp = g_sys.get_timestamp();
+			switch (state) {
+			case 0:
+				screen_add_sprite(95 + offset_x, 155 + offset_y, animframe_0135[frame1]);
+				if (frame1 < animframe_0135[0]) {
+					++frame1;
+				} else {
+					frame1 = 1;
 				}
-				screen_vsync();
-				state = 1;
-				frame1 = frame2 = 1;
-			} else if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
-				g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
-				for (int i = 0; i < colors_count; ++i) {
-					screen_adjust_palette_color(2, color_rgb, 1);
-					screen_adjust_palette_color(9, color_rgb, 1);
+				screen_add_sprite(190 + offset_x, 155 + offset_y, animframe_01d5[frame2]);
+				if (frame2 < animframe_01d5[0]) {
+					++frame2;
+				} else {
+					frame2 = 1;
 				}
-				screen_vsync();
-				state = 2;
-				frame1 = frame2 = 1;
+				g_vars.two_players_flag = 0;
+				level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER1] = PLAYER_JAKE;
+				level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER2] = 100;
+				g_vars.player = PLAYER_JAKE;
+				if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
+					g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
+					for (int i = 0; i < colors_count; ++i) {
+						screen_adjust_palette_color( 2, color_rgb,  1);
+						screen_adjust_palette_color( 9, color_rgb,  1);
+						screen_adjust_palette_color( 3, color_rgb, -1);
+						screen_adjust_palette_color(10, color_rgb, -1);
+					}
+					screen_vsync();
+					state = 1;
+					frame1 = frame2 = 1;
+				} else if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
+					g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
+					for (int i = 0; i < colors_count; ++i) {
+						screen_adjust_palette_color(2, color_rgb, 1);
+						screen_adjust_palette_color(9, color_rgb, 1);
+					}
+					screen_vsync();
+					state = 2;
+					frame1 = frame2 = 1;
+				}
+				break;
+			case 1:
+				screen_add_sprite(95 + offset_x, 155 + offset_y, animframe_00dd[frame1]);
+				if (frame1 < animframe_00dd[0]) {
+					++frame1;
+				} else {
+					frame1 = 4;
+				}
+				screen_add_sprite(190 + offset_x, 155 + offset_y, animframe_022d[frame2]);
+				if (frame2 < animframe_022d[0]) {
+					++frame2;
+				} else {
+					frame2 = 1;
+				}
+				g_vars.two_players_flag = 0;
+				level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER1] = PLAYER_ELWOOD;
+				level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER2] = 100;
+				g_vars.player = PLAYER_ELWOOD;
+				if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
+					g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
+					for (int i = 0; i < colors_count; ++i) {
+						screen_adjust_palette_color( 3, color_rgb, 1);
+						screen_adjust_palette_color(10, color_rgb, 1);
+					}
+					screen_vsync();
+					state = 2;
+					frame1 = frame2 = 1;
+				} else if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
+					g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
+					for (int i = 0; i < colors_count; ++i) {
+						screen_adjust_palette_color( 3, color_rgb,  1);
+						screen_adjust_palette_color(10, color_rgb,  1);
+						screen_adjust_palette_color( 2, color_rgb, -1);
+						screen_adjust_palette_color( 9, color_rgb, -1);
+					}
+					screen_vsync();
+					state = 0;
+					frame1 = frame2 = 1;
+				}
+				break;
+			case 2:
+				screen_add_sprite(95 + offset_x, 155 + offset_y, animframe_0135[frame1]);
+				if (frame1 < animframe_0135[0]) {
+					++frame1;
+				} else {
+					frame1 = 1;
+				}
+				screen_add_sprite(190 + offset_x, 155 + offset_y, animframe_022d[frame2]);
+				if (frame2 < animframe_022d[0]) {
+					++frame2;
+				} else {
+					frame2 = 1;
+				}
+				g_vars.two_players_flag = 1;
+				if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
+					g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
+					for (int i = 0; i < colors_count; ++i) {
+						screen_adjust_palette_color(2, color_rgb, -1);
+						screen_adjust_palette_color(9, color_rgb, -1);
+					}
+					screen_vsync();
+					state = 0;
+					frame1 = frame2 = 1;
+				} else if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
+					g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
+					for (int i = 0; i < colors_count; ++i) {
+						screen_adjust_palette_color( 3, color_rgb, -1);
+						screen_adjust_palette_color(10, color_rgb, -1);
+					}
+					screen_vsync();
+					state = 1;
+					frame1 = frame2 = 1;
+				}
+				break;
 			}
-			break;
-		case 1:
-			screen_add_sprite(95, 155, animframe_00dd[frame1]);
-			if (frame1 < animframe_00dd[0]) {
-				++frame1;
-			} else {
-				frame1 = 4;
-			}
-			screen_add_sprite(190, 155, animframe_022d[frame2]);
-			if (frame2 < animframe_022d[0]) {
-				++frame2;
-			} else {
-				frame2 = 1;
-			}
-			g_vars.two_players_flag = 0;
-			level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER1] = PLAYER_ELWOOD;
-			level_data[g_vars.level * MAX_OBJECTS + OBJECT_NUM_PLAYER2] = 100;
-			g_vars.player = PLAYER_ELWOOD;
-			if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
-				g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
+			if (!fade) {
+				g_sys.fade_in_palette();
+				fade = 1;
 				for (int i = 0; i < colors_count; ++i) {
 					screen_adjust_palette_color( 3, color_rgb, 1);
 					screen_adjust_palette_color(10, color_rgb, 1);
 				}
-				screen_vsync();
-				state = 2;
-				frame1 = frame2 = 1;
-			} else if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
-				g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
-				for (int i = 0; i < colors_count; ++i) {
-					screen_adjust_palette_color( 3, color_rgb,  1);
-					screen_adjust_palette_color(10, color_rgb,  1);
-					screen_adjust_palette_color( 2, color_rgb, -1);
-					screen_adjust_palette_color( 9, color_rgb, -1);
-				}
-				screen_vsync();
-				state = 0;
-				frame1 = frame2 = 1;
+				continue;
 			}
-			break;
-		case 2:
-			screen_add_sprite(95, 155, animframe_0135[frame1]);
-			if (frame1 < animframe_0135[0]) {
-				++frame1;
-			} else {
-				frame1 = 1;
+			screen_flip();
+			screen_vsync();
+			const int diff = (timestamp + (1000 / 30)) - g_sys.get_timestamp();
+			g_sys.sleep(diff < 10 ? 10 : diff);
+			screen_clear_sprites();
+			if (g_sys.input.space || g_vars.play_demo_flag) {
+				quit = 1;
 			}
-			screen_add_sprite(190, 155, animframe_022d[frame2]);
-			if (frame2 < animframe_022d[0]) {
-				++frame2;
-			} else {
-				frame2 = 1;
-			}
-			g_vars.two_players_flag = 1;
-			if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
-				g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
-				for (int i = 0; i < colors_count; ++i) {
-					screen_adjust_palette_color(2, color_rgb, -1);
-					screen_adjust_palette_color(9, color_rgb, -1);
-				}
-				screen_vsync();
-				state = 0;
-				frame1 = frame2 = 1;
-			} else if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
-				g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
-				for (int i = 0; i < colors_count; ++i) {
-					screen_adjust_palette_color( 3, color_rgb, -1);
-					screen_adjust_palette_color(10, color_rgb, -1);
-				}
-				screen_vsync();
-				state = 1;
-				frame1 = frame2 = 1;
-			}
-			break;
-		}
-		if (!fade) {
-			g_sys.fade_in_palette();
-			fade = 1;
-			for (int i = 0; i < colors_count; ++i) {
-				screen_adjust_palette_color( 3, color_rgb, 1);
-				screen_adjust_palette_color(10, color_rgb, 1);
-			}
-			continue;
-		}
-		screen_flip();
-		screen_vsync();
-		const int diff = (timestamp + (1000 / 30)) - g_sys.get_timestamp();
-		g_sys.sleep(diff < 10 ? 10 : diff);
-		screen_clear_sprites();
-		if (g_sys.input.space || g_vars.play_demo_flag) {
-			quit = 1;
-		}
-	} while (!quit && !g_sys.input.quit);
+		} while (!quit && !g_sys.input.quit);
+	} while (g_sys.resize);
 }
 
 static void do_inter_screen_helper(int xpos, int ypos, int c) {
@@ -236,34 +251,41 @@ static void do_inter_screen_helper(int xpos, int ypos, int c) {
 static void do_inter_screen() {
 	static const uint8_t xpos[] = { 0xFA, 0x50, 0xF0, 0xC8, 0x50, 0x50 };
 	static const uint8_t ypos[] = { 0xAA, 0x37, 0x28, 0x5F, 0xA5, 0xAA };
-	load_img(g_res.amiga_data ? "inter.lbm" : "inter.sqz", GAME_SCREEN_W, g_options.cga_colors ? 9 : -1);
-	screen_clear_sprites();
-	if (g_vars.level > 1) {
-		for (int i = 0; i < g_vars.level - 1; ++i) {
-			do_inter_screen_helper(xpos[i], ypos[i], 0);
-		}
-	}
-	if (g_vars.level == MAX_LEVELS - 1) {
-		do_inter_screen_helper(xpos[g_vars.level], ypos[g_vars.level], 0);
-	}
-	g_sys.fade_in_palette();
-	if (g_vars.level > 0 && g_vars.level < MAX_LEVELS - 1) {
-		do_inter_screen_helper(xpos[g_vars.level - 1], ypos[g_vars.level - 1], 1);
-	}
-	// screen_do_transition2();
-	screen_flip();
-	if (g_vars.level < MAX_LEVELS - 1) {
-		play_sound(SOUND_2);
-		screen_add_sprite(xpos[g_vars.level], ypos[g_vars.level], 126);
-	}
-	screen_flip();
-	const uint32_t timestamp = g_sys.get_timestamp() + 4 * 1000;
 	do {
-		update_input();
-		if (g_sys.input.space || g_sys.input.quit) {
-			break;
+		screen_resize();
+		offset_x = (GAME_SCREEN_W > 320) ? (GAME_SCREEN_W - 320) / 2 : 0;
+		offset_y = (GAME_SCREEN_H > 200) ? (GAME_SCREEN_H - 200) / 2 : 0;
+		screen_init();
+		load_img(g_res.amiga_data ? "inter.lbm" : "inter.sqz", GAME_SCREEN_W, g_options.cga_colors ? 9 : -1);
+		screen_copy_centred(g_res.vga, 320, 200);
+		screen_clear_sprites();
+		if (g_vars.level > 1) {
+			for (int i = 0; i < g_vars.level - 1; ++i) {
+				do_inter_screen_helper(xpos[i] + offset_x, ypos[i] + offset_y, 0);
+			}
 		}
-	} while (g_sys.get_timestamp() < timestamp);
+		if (g_vars.level == MAX_LEVELS - 1) {
+			do_inter_screen_helper(xpos[g_vars.level] + offset_x, ypos[g_vars.level] + offset_y, 0);
+		}
+		g_sys.fade_in_palette();
+		if (g_vars.level > 0 && g_vars.level < MAX_LEVELS - 1) {
+			do_inter_screen_helper(xpos[g_vars.level - 1] + offset_x, ypos[g_vars.level - 1] + offset_y, 1);
+		}
+		screen_do_transition2();
+		screen_flip();
+		if (g_vars.level < MAX_LEVELS - 1) {
+			play_sound(SOUND_2);
+			screen_add_sprite(xpos[g_vars.level], ypos[g_vars.level], 126);
+		}
+		screen_flip();
+		const uint32_t timestamp = g_sys.get_timestamp() + 4 * 1000;
+		do {
+			update_input();
+			if (g_sys.input.space || g_sys.input.quit || g_sys.resize) {
+				break;
+			}
+		} while (g_sys.get_timestamp() < timestamp);
+	} while (g_sys.resize);
 	fade_out_palette();
 }
 

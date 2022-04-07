@@ -2123,7 +2123,7 @@ static void level_update_players() {
 
 static void init_panel(int x_offset) {
 	for (int y = 0; y < PANEL_H; ++y) {
-		memcpy(g_res.vga + (GAME_SCREEN_H - PANEL_H + y) * GAME_SCREEN_W + x_offset, g_res.board + y * 320, 320);
+		memcpy(g_res.vga + (TILEMAP_SCREEN_H + y) * GAME_SCREEN_W + x_offset, g_res.board + y * 320, 320);
 	}
 	if (g_vars.player == 1) {
 		video_draw_dot_pattern(x_offset);
@@ -2134,7 +2134,7 @@ static void init_panel(int x_offset) {
 
 static void draw_panel_vinyl(int offset, int spr, int x_offset) {
 	const uint8_t *src = g_res.board + 0x1E00 + spr * 16;
-	const int y_dst = (GAME_SCREEN_H - PANEL_H) + offset / 80;
+	const int y_dst = TILEMAP_SCREEN_H + offset / 80;
 	const int x_dst = (offset % 80) * 4 + 2 + x_offset;
 	for (int y = 0; y < 16; ++y) {
 		memcpy(g_res.vga + (y_dst + y) * GAME_SCREEN_W + x_dst, src, 16);
@@ -2144,7 +2144,7 @@ static void draw_panel_vinyl(int offset, int spr, int x_offset) {
 
 static void draw_panel_energy(int offset, int count, int x_offset) {
 	const uint8_t *src = g_res.board + 0x2840 + count * 40;
-	const int y_dst = (GAME_SCREEN_H - PANEL_H) + offset / 80;
+	const int y_dst = TILEMAP_SCREEN_H + offset / 80;
 	const int x_dst = (offset % 80) * 4 + x_offset;
 	for (int y = 0; y < 6; ++y) {
 		memcpy(g_res.vga + (y_dst + y) * GAME_SCREEN_W + x_dst, src, 40);
@@ -2153,7 +2153,7 @@ static void draw_panel_energy(int offset, int count, int x_offset) {
 }
 
 static void draw_panel_number(int bp, int di, int num, int x_offset) {
-	int y_dst = (GAME_SCREEN_H - PANEL_H) + di / 80;
+	int y_dst = TILEMAP_SCREEN_H + di / 80;
 	int x_dst = (di % 80) * 4 + x_offset;
 	int digits[3];
 	int count = 0;
@@ -2167,7 +2167,7 @@ static void draw_panel_number(int bp, int di, int num, int x_offset) {
 	for (; count > 0; --count) {
 		const uint8_t *src = g_res.board + bp + digits[count - 1] * 8;
 		for (int y = 0; y < 8; ++y) {
-			memcpy(g_res.vga + (y_dst + y) * GAME_SCREEN_W + x_dst, src, 8);
+			memcpy(g_res.vga + (y_dst + y) * TILEMAP_SCREEN_W + x_dst, src, 8);
 			src += 320;
 		}
 		x_dst += 8;
@@ -2965,6 +2965,7 @@ static void level_player_draw_powerup_animation(struct player_t *player, struct 
 
 static void init_level(uint16_t level) {
 	load_level_data(level);
+	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 	reset_level_data();
 	level_init_players();
 	level_init_tilemap();
@@ -3003,6 +3004,7 @@ void do_level() {
 	while (!g_sys.input.quit) {
 		g_vars.timestamp = g_sys.get_timestamp();
 		update_input();
+		video_resize();
 		level_update_palette();
 		level_update_input();
 		level_update_triggers();

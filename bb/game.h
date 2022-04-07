@@ -3,11 +3,17 @@
 #define GAME_H__
 
 #include "intern.h"
+#include "sys.h"
 
+#define PANEL_H           40
 #define TILEMAP_OFFSET_Y  14
 #define TILEMAP_SCREEN_W  GAME_SCREEN_W
-#define TILEMAP_SCREEN_H (GAME_SCREEN_H - 40)
+#define TILEMAP_SCREEN_H (GAME_SCREEN_H - PANEL_H)
 #define TILEMAP_SCROLL_W  64
+
+#define STATUSBAR_W 16
+#define STATUSBAR_H 12
+#define STATUSBAR_D 4
 
 #define PLAYER_JAKE   0
 #define PLAYER_ELWOOD 1
@@ -237,6 +243,8 @@ extern void	screen_add_game_sprite2(int x, int y, int frame);
 extern void	screen_add_game_sprite3(int x, int y, int frame, int blinking_counter);
 extern void	screen_add_game_sprite4(int x, int y, int frame, int blinking_counter);
 extern void	screen_load_graphics(const uint8_t *dither_lut_sqv, const uint8_t *dither_lut_avt);
+extern void	screen_copy_centred(uint8_t *src, int h, int w);
+extern void	screen_resize();
 
 /* sound.c */
 extern void	sound_init();

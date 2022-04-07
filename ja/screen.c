@@ -12,7 +12,7 @@
 
 void video_draw_dot_pattern(int offset) {
 	static const int W = 144;
-	uint8_t *dst = g_res.vga + (GAME_SCREEN_H - PANEL_H) * GAME_SCREEN_W + offset;
+	uint8_t *dst = g_res.vga + TILEMAP_SCREEN_H * GAME_SCREEN_W + offset;
 	for (int y = 0; y < PANEL_H; ++y) {
 		for (int x = 0; x < W; x += 2) {
 			dst[x + (y & 1)] = 0;
@@ -40,6 +40,21 @@ void video_draw_string(const char *s, int offset, int hspace) {
 	}
 }
 
+void video_resize() {
+	if (g_sys.resize) {
+		free(g_res.vga);
+		g_res.vga = (uint8_t *)calloc(GAME_SCREEN_W * GAME_SCREEN_H, 1);
+		if (!g_res.vga) {
+			print_error("Failed to reallocate vga buffer, %d bytes", GAME_SCREEN_W * GAME_SCREEN_H);
+		}
+		g_sys.resize = false;
+	}
+}
+
+void video_clear() {
+	memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+}
+
 void video_copy_vga(int size) {
 	if (size == 0xB500) {
 		memcpy(g_res.background, g_res.tmp + 768, 64000);
@@ -50,9 +65,11 @@ void video_copy_vga(int size) {
 		if (GAME_SCREEN_W * GAME_SCREEN_H == 64000) {
 			memcpy(g_res.vga, src, 64000);
 		} else {
-			memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+			uint16_t x_offs = (GAME_SCREEN_W - 320) / 2;
+			uint16_t y_offs = (GAME_SCREEN_H - 200) / 2;
+			video_clear();
 			for (int y = 0; y < MIN(200, GAME_SCREEN_H); ++y) {
-				memcpy(g_res.vga + y * GAME_SCREEN_W, src, MIN(320, GAME_SCREEN_W));
+				memcpy(g_res.vga + (y + y_offs) * GAME_SCREEN_W + x_offs, src, MIN(320, GAME_SCREEN_W));
 				src += 320;
 			}
 		}
@@ -61,6 +78,7 @@ void video_copy_vga(int size) {
 }
 
 void video_copy_backbuffer(int h) {
+	video_clear();
 	for (int y = 0; y < MIN(200, GAME_SCREEN_H) - h; ++y) {
 		for (int x = 0; x < GAME_SCREEN_W; x += 320) {
 			memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * 320, MIN(320, GAME_SCREEN_W - x));

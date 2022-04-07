@@ -25,7 +25,7 @@ static void wait_input(int timeout) {
 	const uint32_t end = g_sys.get_timestamp() + timeout * 10;
 	while (g_sys.get_timestamp() < end) {
 		g_sys.process_events();
-		if (g_sys.input.quit || g_sys.input.space) {
+		if (g_sys.input.quit || g_sys.input.space || g_sys.resize) {
 			break;
 		}
 		g_sys.sleep(20);
@@ -89,61 +89,69 @@ static void do_select_screen_scroll_palette_pattern4() {
 
 static void do_select_screen() {
 	load_file("select.eat");
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
-	memcpy(g_vars.palette_buffer, g_res.tmp, 256 * 3);
-	do_select_screen_scroll_palette_pattern2();
 	int bl = 2;
-	while (!g_sys.input.quit) {
-		int bh = bl;
-		if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
-			g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
-			++bl;
-			if (bl > 2) {
-				bl = 2;
+	do {
+		video_resize();
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		memcpy(g_vars.palette_buffer, g_res.tmp, 256 * 3);
+		do_select_screen_scroll_palette_pattern2();
+		while (!g_sys.input.quit) {
+			if (g_sys.resize)
+				break;
+			int bh = bl;
+			if (g_sys.input.direction & INPUT_DIRECTION_RIGHT) {
+				g_sys.input.direction &= ~INPUT_DIRECTION_RIGHT;
+				++bl;
+				if (bl > 2) {
+					bl = 2;
+				}
 			}
-		}
-		if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
-			g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
-			--bl;
-			if (bl < 1) {
-				bl = 1;
+			if (g_sys.input.direction & INPUT_DIRECTION_LEFT) {
+				g_sys.input.direction &= ~INPUT_DIRECTION_LEFT;
+				--bl;
+				if (bl < 1) {
+					bl = 1;
+				}
 			}
-		}
-		bh ^= bl;
-		if (bh & 1) {
-			if (bl & 1) {
-				do_select_screen_scroll_palette_pattern4();
-			} else {
-				do_select_screen_scroll_palette_pattern2();
+			bh ^= bl;
+			if (bh & 1) {
+				if (bl & 1) {
+					do_select_screen_scroll_palette_pattern4();
+				} else {
+					do_select_screen_scroll_palette_pattern2();
+				}
 			}
-		}
-		if (bh & 2) {
-			if (bl & 2) {
-				do_select_screen_scroll_palette_pattern3();
-			} else {
-				do_select_screen_scroll_palette_pattern1();
+			if (bh & 2) {
+				if (bl & 2) {
+					do_select_screen_scroll_palette_pattern3();
+				} else {
+					do_select_screen_scroll_palette_pattern1();
+				}
 			}
+			if (g_sys.input.space) {
+				assert(bl == 1 || bl == 2);
+				g_sys.input.space = 0;
+				g_vars.player = 1 - ((bl & 3) - 1);
+				g_sys.fade_out_palette();
+				break;
+			}
+			update_input();
 		}
-		if (g_sys.input.space) {
-			assert(bl == 1 || bl == 2);
-			g_sys.input.space = 0;
-			g_vars.player = 1 - ((bl & 3) - 1);
-			g_sys.fade_out_palette();
-			break;
-		}
-		update_input();
 		g_sys.sleep(30);
-	}
+	} while (g_sys.resize);
 }
 
 void do_difficulty_screen() {
 	char name[16];
 	snprintf(name, sizeof(name), "dif%02d.eat", (g_vars.level >> 3) + 1);
 	load_file(name);
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
-	wait_input(560);
+	do {
+		video_resize();
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		wait_input(560);
+	} while (g_sys.resize);
 	g_sys.fade_out_palette();
 }
 
@@ -152,9 +160,13 @@ void do_level_number_screen() {
 	video_draw_string("LEVEL NUMBER", 0x5E0C, 11);
 	char buf[8];
 	snprintf(buf, sizeof(buf), "%02d", g_vars.level);
-	video_draw_string(buf, 0x5E9B, 11);
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
+	do {
+		video_resize();
+		video_draw_string(buf, 0x5E9B, 11);
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		wait_input(1);
+	} while (g_sys.resize);
 	g_sys.fade_out_palette();
 }
 
@@ -177,12 +189,15 @@ void do_level_password_screen() {
 		str[i] = (dx <= '9') ? dx : (dx + 7);
 	}
 	str[4] = 0;
-	video_draw_string("STAGE NUMBER", 0x7E96, 11);
-	video_draw_string(str, 0xABB4, 20);
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
-	scroll_screen_palette();
-	wait_input(64000);
+	do {
+		video_resize();
+		video_draw_string("STAGE NUMBER", 0x7E96, 11);
+		video_draw_string(str, 0xABB4, 20);
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		scroll_screen_palette();
+		wait_input(64000);
+	} while (g_sys.resize);
 	g_sys.fade_out_palette();
 }
 
@@ -196,70 +211,87 @@ static void do_password_screen() {
 
 static int do_menu_screen() {
 	load_file("menu.eat");
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
-	memset(g_vars.input_keystate, 0, sizeof(g_vars.input_keystate));
-	g_vars.level_time = 0;
-	while (!g_sys.input.quit) {
-		scroll_screen_palette();
-		if (g_vars.input_keystate[2] || g_vars.input_keystate[0x4F] || g_sys.input.space) {
-			g_sys.input.space = 0;
-			g_sys.fade_out_palette();
-			return 1;
+	do {
+		video_resize();
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		memset(g_vars.input_keystate, 0, sizeof(g_vars.input_keystate));
+		g_vars.level_time = 0;
+		while (!g_sys.input.quit) {
+			scroll_screen_palette();
+			if (g_vars.input_keystate[2] || g_vars.input_keystate[0x4F] || g_sys.input.space) {
+				g_sys.input.space = 0;
+				g_sys.fade_out_palette();
+				return 1;
+			}
+			if (g_vars.input_keystate[3] || g_vars.input_keystate[0x50]) {
+				g_sys.fade_out_palette();
+				return 2;
+			}
+			if (g_vars.input_keystate[4] || g_vars.input_keystate[0x51]) {
+				return 3;
+			}
+			update_input();
+			if (g_sys.resize)
+				break;
+			g_sys.sleep(30);
 		}
-		if (g_vars.input_keystate[3] || g_vars.input_keystate[0x50]) {
-			g_sys.fade_out_palette();
-			return 2;
-		}
-		if (g_vars.input_keystate[4] || g_vars.input_keystate[0x51]) {
-			return 3;
-		}
-		update_input();
-		g_sys.sleep(30);
-	}
+	} while (g_sys.resize);
 	return 0;
 }
 
 static int do_options_screen() {
 	g_sys.fade_out_palette();
 	load_file("fond.eat");
-	video_draw_string("GAME SPEED", 0x3EE9, 11);
-	video_draw_string("1 FAST", 0x647E, 11);
-	video_draw_string("2 NORMAL", 0x89FE, 11);
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
-	memset(g_vars.input_keystate, 0, sizeof(g_vars.input_keystate));
-	while (!g_sys.input.quit) {
-		scroll_screen_palette();
-		if (g_vars.input_keystate[2] || g_vars.input_keystate[0x4F]) {
-			g_sys.fade_out_palette();
-			return 1;
+	do {
+		video_resize();
+		video_draw_string("GAME SPEED", 0x3EE9, 11);
+		video_draw_string("1 FAST", 0x647E, 11);
+		video_draw_string("2 NORMAL", 0x89FE, 11);
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		memset(g_vars.input_keystate, 0, sizeof(g_vars.input_keystate));
+		while (!g_sys.input.quit) {
+			scroll_screen_palette();
+			if (g_vars.input_keystate[2] || g_vars.input_keystate[0x4F]) {
+				g_sys.fade_out_palette();
+				return 1;
+			}
+			if (g_vars.input_keystate[3] || g_vars.input_keystate[0x50]) {
+				g_sys.fade_out_palette();
+				return 2;
+			}
+			update_input();
+			if (g_sys.resize)
+				break;
+			g_sys.sleep(30);
 		}
-		if (g_vars.input_keystate[3] || g_vars.input_keystate[0x50]) {
-			g_sys.fade_out_palette();
-			return 2;
-		}
-		update_input();
-		g_sys.sleep(30);
-	}
+	} while (g_sys.resize);
 	return 0;
 }
 
 void do_game_over_screen() {
 	load_file("fond.eat");
-	video_draw_string("GAME OVER", 0x5E2E, 11);
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
-	wait_input(64000);
+	do {
+		video_resize();
+		video_draw_string("GAME OVER", 0x5E2E, 11);
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+		wait_input(64000);
+	} while (g_sys.resize);
 	g_sys.fade_out_palette();
 }
 
 void do_game_win_screen() {
 	load_file("win.eat");
-	video_copy_vga(0x7D00);
-	g_sys.fade_in_palette();
+	do {
+		video_resize();
+		video_copy_vga(0x7D00);
+		g_sys.fade_in_palette();
+	} while (g_sys.resize);
 	g_sys.fade_out_palette();
 	load_file("end.eat");
+	video_resize();
 	video_copy_vga(0xB500);
 	static const int count = 5;
 	static const struct {
@@ -293,17 +325,25 @@ void do_game_win_screen() {
 		{ 0xFFFF, 0 }
 	};
 	int i = 0;
-	for (int j = 0; j < count; ++j) {
-		for (; text[i].str; ++i) {
-			video_draw_string(text[i].str, text[i].offset, 11);
+	int j = 0;
+	do {
+		video_resize();
+		for (; j < count; ++j) {
+			for (; text[i].str; ++i) {
+				video_draw_string(text[i].str, text[i].offset, 11);
+			}
+			++i;
+			video_copy_vga(0x7D00);
+			g_sys.fade_in_palette();
+			wait_input(64000);
+			if (g_sys.resize) {
+				--i;
+				break;
+			}
+			g_sys.fade_out_palette();
+			memcpy(g_res.tmp + 768, g_res.background, 64000);
 		}
-		++i;
-		video_copy_vga(0x7D00);
-		g_sys.fade_in_palette();
-		wait_input(64000);
-		g_sys.fade_out_palette();
-		memcpy(g_res.tmp + 768, g_res.background, 64000);
-	}
+	} while (g_sys.resize);
 }
 
 void game_main() {
@@ -311,7 +351,7 @@ void game_main() {
 	do_splash_screen();
 	g_sys.set_screen_palette(common_palette_data, 0, 128, 6);
 	video_load_sprites();
-	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+	g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_H, TILEMAP_SCREEN_H);
 	while (!g_sys.input.quit) {
 		update_input();
 		g_vars.level = g_options.start_level;

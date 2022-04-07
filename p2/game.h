@@ -3,6 +3,7 @@
 #define GAME_H__
 
 #include "intern.h"
+#include "sys.h"
 
 extern struct options_t g_options;
 
@@ -372,6 +373,7 @@ extern void	video_draw_string(int offset, int hspace, const char *s);
 extern void	video_clear();
 extern void	video_copy_img(const uint8_t *src);
 extern void	video_copy_map(const uint8_t *src);
+extern void	video_copy_centred(uint8_t *src, int w, int h);
 extern void	video_draw_panel(const uint8_t *src);
 extern void	video_draw_panel_number(int offset, int num);
 extern void	video_draw_number(int offset, int num);
@@ -386,6 +388,7 @@ extern void	video_transition_open();
 extern void	video_load_sprites();
 extern void	video_draw_sprite(int num, int x, int y, int flag);
 extern void	video_put_pixel(int x, int y, uint8_t color);
+extern void	video_resize();
 
 /* sound.c */
 extern void	sound_init();
