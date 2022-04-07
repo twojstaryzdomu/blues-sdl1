@@ -724,7 +724,7 @@ static void render_load_sprites(int spr_type, int count, const struct sys_rect_t
 	sheet->texture = SDL_CreateTextureFromSurface(_renderer, surface);
 	if (update_pal) { /* update texture on palette change */
 		sheet->surface = surface;
-	} else  {
+	} else {
 		SDL_FreeSurface(surface);
 	}
 }

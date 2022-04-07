@@ -99,7 +99,7 @@ void play_sound(int num) {
 	_channel.pos = 0;
 	_channel.step = (8000 << 16) / _rate;
 	_channel.size = sample_size;
-	if (num == 10)  {
+	if (num == 10) {
 		static const int8_t seq[] = { 10, 10, 10, 6, -1 };
 		_channel.seq = seq + 1;
 	} else {
