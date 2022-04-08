@@ -49,6 +49,10 @@ void video_resize() {
 		}
 		g_sys.resize = false;
 	}
+	if (g_sys.rehint) {
+		video_load_sprites();
+		g_sys.rehint = false;
+	}
 }
 
 void video_clear() {

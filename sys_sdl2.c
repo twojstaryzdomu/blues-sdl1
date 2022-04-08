@@ -158,9 +158,9 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 		g_sys.h = screen_h;
 	}
 	if (!filter || strcmp(filter, "nearest") == 0) {
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+		SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "0", SDL_HINT_OVERRIDE);
 	} else if (strcmp(filter, "linear") == 0) {
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+		SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "1", SDL_HINT_OVERRIDE);
 	} else {
 		print_warning("Unhandled filter '%s'", filter);
 	}
@@ -390,6 +390,13 @@ static void sdl2_rescale_screen(int n) {
 	}
 }
 
+static void sdl2_rehint_screen(const char *f) {
+	_filter = f;
+	g_sys.rehint = true;
+	g_sys.resize_screen();
+	fprintf(stderr, "Set hint quality %s\n", _filter);
+}
+
 static void sdl2_update_screen(const uint8_t *p, int present) {
 	if (_copper_color_key != -1) {
 		for (int j = 0; j < g_sys.h; ++j) {
@@ -518,11 +525,20 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 		if (keydown)
 			sdl2_rescale_screen(1);
 		break;
+	case SDLK_l:
+		if (keydown)
+			sdl2_rehint_screen("linear");
+		break;
+	case SDLK_n:
+		if (keydown)
+			sdl2_rehint_screen("nearest");
+		break;
 	case SDLK_o:
 		if (keydown) {
 			fprintf(stderr, "Restoring original window size %dx%d, scale %d, fullscreen %d\n", _orig_w, _orig_h, _orig_scale, _orig_fullscreen);
 			SDL_RestoreWindow(_window);
 			g_sys.resize = true;
+			g_sys.rehint = true;
 			_size_lock = false;
 			sdl2_set_screen_size(_orig_w, _orig_h, _caption, _orig_scale, _orig_filter, _orig_fullscreen, _orig_color);
 		}

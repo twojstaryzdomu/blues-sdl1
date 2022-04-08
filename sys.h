@@ -71,6 +71,7 @@ struct sys_t {
 	bool	paused;
 	bool	audio;
 	bool	resize;
+	bool	rehint;
 	int	w, h;
 };
 

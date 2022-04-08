@@ -632,7 +632,8 @@ static void level_init_tilemap() {
 	g_vars.tilemap.prev_x = _undefined;
 	g_vars.tilemap.prev_y = _undefined;
 	level_update_tilemap();
-	video_transition_open();
+	if (!g_sys.rehint)
+		video_transition_open();
 }
 
 void level_player_die() {
@@ -3285,12 +3286,11 @@ static void level_update_light_palette() {
 
 static void level_sync() {
 	update_input();
-	if (g_sys.resize) {
+	if (g_sys.resize || g_sys.rehint) {
 		video_resize();
 		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
-		g_sys.resize = true;
 		level_init_tilemap();
-		g_sys.resize = false;
+		g_sys.rehint = false;
 	}
 	g_sys.update_screen(g_res.vga, 1);
 	g_sys.render_clear_sprites();

@@ -93,7 +93,7 @@ static void do_select_player() {
 		screen_clear_sprites();
 		do {
 			update_input();
-			if (g_sys.resize)
+			if (g_sys.resize || g_sys.rehint)
 				break;
 			const uint32_t timestamp = g_sys.get_timestamp();
 			switch (state) {

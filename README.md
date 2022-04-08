@@ -58,6 +58,8 @@ the window or scale.
 |:-----------:|:-------------------------------------|
 |      D      | Decrease scale                       |
 |      I      | Increase scale                       |
+|      L      | Set scaling filter to linear         |
+|      N      | Set scaling filter to nearest        |
 |      O      | Restore original scale & screen size |
 |      P      | Pause game                           |
 |      S      | Toggle screen size lock              |
