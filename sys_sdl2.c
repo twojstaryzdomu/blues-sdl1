@@ -117,6 +117,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 		printf("Couldn't set video mode: %s\n", SDL_GetError());
 		exit(-1);
 	}
+	SDL_WM_SetCaption(caption, 0);
 	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", _screen_w, _screen_h);
 	_screen_buffer = (uint32_t *)calloc(_screen_w * _screen_h, sizeof(uint32_t));
 	if (!_screen_buffer) {
