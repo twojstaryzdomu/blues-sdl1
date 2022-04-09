@@ -323,7 +323,7 @@ static void level_update_tilemap() {
 	if (GAME_SCREEN_W * GAME_SCREEN_H == 64000) {
 		memcpy(g_res.vga, g_res.background, 320 * 200);
 	} else {
-		memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+		video_clear();
 		for (int y = 0; y < MIN(200, GAME_SCREEN_H); ++y) {
 			for (int x = 0; x < GAME_SCREEN_W; x += 320) {
 				memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * 320, MIN(320, GAME_SCREEN_W - x));
@@ -332,8 +332,8 @@ static void level_update_tilemap() {
 	}
 	g_vars.tile_attr2_flags = 0;
 	uint16_t offset = (g_vars.tilemap.y << 8) | g_vars.tilemap.x;
-	for (int y = 0; y < (TILEMAP_SCREEN_H / 16) + 1; ++y) {
-		for (int x = 0; x < (TILEMAP_SCREEN_W / 16) + 1; ++x) {
+	for (int y = 0; y < ((TILEMAP_SCREEN_H + 15) & ~15) / 16 + 1; ++y) {
+		for (int x = 0; x < ((TILEMAP_SCREEN_W + 15) & ~15) / 16 + 1; ++x) {
 			const uint8_t tile_num = level_get_tile(offset + x);
 			g_vars.tile_attr2_flags |= g_res.level.tile_attributes2[tile_num];
 			if (_redraw_tilemap || g_vars.animated_tile_flag_tbl[tile_num] != 0) {
@@ -364,8 +364,8 @@ static void level_draw_tilemap() {
 	g_vars.tilemap.redraw_flag2 = 0;
 	g_vars.tile_attr2_flags = 0;
 	uint16_t offset = (g_vars.tilemap.y << 8) | g_vars.tilemap.x;
-	for (int y = 0; y < (TILEMAP_SCREEN_H / 16) + 1; ++y) {
-		for (int x = 0; x < TILEMAP_SCREEN_W / 16; ++x) {
+	for (int y = 0; y < ((TILEMAP_SCREEN_H + 15) & ~15) / 16 + 1; ++y) {
+		for (int x = 0; x < ((TILEMAP_SCREEN_W + 15) & ~15) / 16; ++x) {
 			const uint8_t tile_num = level_get_tile(offset + x);
 			g_vars.tile_attr2_flags |= g_res.level.tile_attributes2[tile_num];
 			level_draw_tile(tile_num, x, y);
@@ -3285,6 +3285,13 @@ static void level_update_light_palette() {
 
 static void level_sync() {
 	update_input();
+	if (g_sys.resize) {
+		video_resize();
+		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+		g_sys.resize = true;
+		level_init_tilemap();
+		g_sys.resize = false;
+	}
 	g_sys.update_screen(g_res.vga, 1);
 	g_sys.render_clear_sprites();
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
@@ -3834,8 +3841,7 @@ static void level_pause() {
 	}
 	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 	level_update_player();
-	level_update_tilemap();
-	video_transition_open();
+	level_init_tilemap();
 	print_debug(DBG_SYSTEM, "Resuming");
 }
 

@@ -89,11 +89,11 @@ void screen_draw_frame(const uint8_t *frame, int fh, int fw, int x, int y) {
 	y += fh + 2;
 	if (g_options.amiga_status_bar || g_res.amiga_data) {
 		if (frame == g_res.spr_frames[123] || frame == g_res.spr_frames[124]) { // top or bottom status bar
-			for (int x = 0; x < GAME_SCREEN_W; x += 16) {
-				decode_amiga_gfx(g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, 16, 12, 4, frame, 16, 0x20, 0xFFFF);
+			for (int x = 0; x < GAME_SCREEN_W; x += STATUSBAR_W) {
+				decode_amiga_gfx(g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, STATUSBAR_W, STATUSBAR_H, STATUSBAR_D, frame, STATUSBAR_W, 0x20, 0xFFFF);
 			}
 		} else {
-			decode_amiga_gfx(g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, 16, 12, 4, frame, 16, 0x20, 0xFFFF);
+			decode_amiga_gfx(g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, STATUSBAR_W, STATUSBAR_H, STATUSBAR_D, frame, STATUSBAR_W, 0x20, 0xFFFF);
 		}
 	} else {
 		const int h = READ_LE_UINT16(frame - 4);
@@ -131,8 +131,43 @@ void screen_do_transition2() {
 	g_sys.transition_screen(&s, TRANSITION_SQUARE, true);
 }
 
+void screen_copy_centred(uint8_t *src, int w, int h) {
+	int y_offs = (GAME_SCREEN_H - h) / 2;
+	int x_offs = (GAME_SCREEN_W - w) / 2;
+	if (y_offs > 0 || x_offs > 0) {
+		uint8_t *tmp = calloc(GAME_SCREEN_W * GAME_SCREEN_H, sizeof(uint8_t));
+		memset(tmp, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+		for (int y = 0; y < h; ++y) {
+			uint16_t right_padding = GAME_SCREEN_W - w;
+			if (y % 2 == 0) {
+				memcpy(tmp + (y_offs + y) * GAME_SCREEN_W + x_offs,
+					src + (320 + right_padding) * y,
+					w * 2 + right_padding);
+			}
+		}
+		free(g_res.vga);
+		g_res.vga = tmp;
+		g_sys.update_screen(g_res.vga, 0);
+	}
+}
+
+void screen_resize() {
+	if (g_sys.resize) {
+		free(g_res.vga);
+		g_res.vga = (uint8_t *)calloc(GAME_SCREEN_W * GAME_SCREEN_H, 1);
+		if (!g_res.vga) {
+			print_error("Failed to reallocate vga buffer, %d bytes", GAME_SCREEN_W * GAME_SCREEN_H);
+		}
+		g_sys.resize = false;
+	}
+}
+
 void screen_clear(int a) {
-	memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+	if (!g_sys.resize) {
+		memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
+	} else {
+		screen_resize();
+	}
 }
 
 void screen_draw_tile(int tile, int type, int x, int y) {

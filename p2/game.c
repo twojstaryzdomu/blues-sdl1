@@ -42,56 +42,63 @@ static void do_programmed_in_1992_screen() {
 	video_clear();
 	g_sys.set_screen_palette(credits_palette_data, 0, 16, 6);
 	int offset = 0x960;
-	video_draw_string(offset, 5, "YEAAA > > >");
-	char str[64];
-	snprintf(str, sizeof(str), "MY GAME IS STILL WORKING IN %04d <<", 1900 + t->tm_year);
-	offset += 0x1E0;
-	video_draw_string(offset, 0, str);
-	offset = 0x1680;
-	video_draw_string(offset, 1, "PROGRAMMED IN 1992 ON AT >286 12MHZ>");
-	offset += 0x1E0;
-	video_draw_string(offset, 3, "> > > ENJOY OLDIES<<");
-	g_sys.update_screen(g_res.vga, 1);
-	wait_input(1000);
+	do {
+		video_resize();
+		video_draw_string(offset, 5, "YEAAA > > >");
+		char str[64];
+		snprintf(str, sizeof(str), "MY GAME IS STILL WORKING IN %04d <<", 1900 + t->tm_year);
+		offset += 0x1E0;
+		video_draw_string(offset, 0, str);
+		offset = 0x1680;
+		video_draw_string(offset, 1, "PROGRAMMED IN 1992 ON AT >286 12MHZ>");
+		offset += 0x1E0;
+		video_draw_string(offset, 3, "> > > ENJOY OLDIES<<");
+		g_sys.update_screen(g_res.vga, 1);
+		wait_input(1000);
+	} while (g_sys.resize);
 	video_clear();
 }
 
 static void do_credits() {
-	g_sys.set_screen_palette(credits_palette_data, 0, 16, 6);
-	int offset = 0x140;
-	video_draw_string(offset, 1, "CODER> DESIGNER AND ARTIST DIRECTOR>");
-	offset += 0x230;
-	video_draw_string(offset, 14, "ERIC ZMIRO");
-	offset += 0x460;
-	video_draw_string(offset, 4, ">MAIN GRAPHICS AND BACKGROUND>");
-	offset += 0x230;
-	video_draw_string(offset, 11, "FRANCIS FOURNIER");
-	offset += 0x460;
-	video_draw_string(offset, 9, ">MONSTERS AND HEROS>");
-	offset += 0x230;
-	video_draw_string(offset, 11, "LYES  BELAIDOUNI");
-	offset = 0x1770;
-	video_draw_string(offset, 15, "THANKS TO");
-	offset = 0x1A40;
-	video_draw_string(offset, 2, "CRISTELLE> GIL ESPECHE AND CORINNE>");
-	offset += 0x1E0;
-	video_draw_string(offset, 0, "SEBASTIEN BECHET AND OLIVIER AKA DELTA>");
-	g_sys.update_screen(g_res.vga, 1);
+	do {
+		video_resize();
+		g_sys.set_screen_palette(credits_palette_data, 0, 16, 6);
+		int offset = 0x140;
+		video_draw_string(offset, 1, "CODER> DESIGNER AND ARTIST DIRECTOR>");
+		offset += 0x230;
+		video_draw_string(offset, 14, "ERIC ZMIRO");
+		offset += 0x460;
+		video_draw_string(offset, 4, ">MAIN GRAPHICS AND BACKGROUND>");
+		offset += 0x230;
+		video_draw_string(offset, 11, "FRANCIS FOURNIER");
+		offset += 0x460;
+		video_draw_string(offset, 9, ">MONSTERS AND HEROS>");
+		offset += 0x230;
+		video_draw_string(offset, 11, "LYES  BELAIDOUNI");
+		offset = 0x1770;
+		video_draw_string(offset, 15, "THANKS TO");
+		offset = 0x1A40;
+		video_draw_string(offset, 2, "CRISTELLE> GIL ESPECHE AND CORINNE>");
+		offset += 0x1E0;
+		video_draw_string(offset, 0, "SEBASTIEN BECHET AND OLIVIER AKA DELTA>");
+		g_sys.update_screen(g_res.vga, 1);
+		wait_input(1000);
+	} while (g_sys.resize);
 }
 
-static void update_screen_img(const uint8_t *src, int present) {
-	const int size = GAME_SCREEN_W * GAME_SCREEN_H;
+static void update_screen_img(uint8_t *src, int present) {
+	int size = GAME_SCREEN_W * GAME_SCREEN_H;
 	if (size < 64000) {
 		return;
 	} else if (size == 64000) {
 		g_sys.update_screen(src, present);
 	} else {
-		memset(g_res.vga, 0, size);
-		const int y_offs = (GAME_SCREEN_H - 200) / 2;
-		const int x_offs = (GAME_SCREEN_W - 320) / 2;
-		for (int y = 0; y < 200; ++y) {
-			memcpy(g_res.vga + (y_offs + y) * GAME_SCREEN_W + x_offs, src + y * 320, 320);
+		if (!g_sys.resize) {
+			memset(g_res.vga, 0, size);
+		} else {
+			video_resize();
 		}
+		video_copy_centred(src, 320, 200);
 		g_sys.update_screen(g_res.vga, present);
 	}
 }
@@ -100,10 +107,13 @@ static void do_titus_screen() {
 	uint8_t *data = load_file("TITUS.SQZ");
 	if (data) {
 		g_sys.set_screen_palette(data, 0, 256, 6);
-		update_screen_img(data + 768, 0);
-		g_sys.fade_in_palette();
-		wait_input(700);
-		g_sys.fade_out_palette();
+		do {
+			video_resize();
+			update_screen_img(data + 768, 0);
+			g_sys.fade_in_palette();
+			wait_input(700);
+			g_sys.fade_out_palette();
+		} while (g_sys.resize);
 		free(data);
 	}
 }
@@ -164,23 +174,29 @@ static const uint8_t joystick_palette_data[] = {
 static void do_demo_screen() {
 	uint8_t *data = load_file("JOYSTICK.SQZ");
 	if (data) {
-		video_copy_img(data);
-		g_sys.set_screen_palette(joystick_palette_data, 0, 16, 6);
-		update_screen_img(g_res.background, 0);
-		g_sys.fade_in_palette();
-		free(data);
-		wait_input(10000);
+		do {
+			video_resize();
+			video_copy_img(data);
+			g_sys.set_screen_palette(joystick_palette_data, 0, 16, 6);
+			update_screen_img(g_res.background, 0);
+			g_sys.fade_in_palette();
+			free(data);
+			wait_input(10000);
+		} while (g_sys.resize);
 	}
 }
 
 static void do_castle_screen() {
 	uint8_t *data = load_file("CASTLE.SQZ");
 	if (data) {
-		g_sys.set_screen_palette(data, 0, 256, 6);
-		update_screen_img(data + 768, 0);
-		g_sys.fade_in_palette();
-		free(data);
-		wait_input(10000);
+		do {
+			video_resize();
+			g_sys.set_screen_palette(data, 0, 256, 6);
+			update_screen_img(data + 768, 1);
+			//g_sys.fade_in_palette();
+			free(data);
+			wait_input(10000);
+		} while (g_sys.resize);
 	}
 }
 
@@ -193,21 +209,21 @@ static void do_map(){
 	const uint16_t spr = 457;
 	uint8_t *data = load_file("MAP.SQZ");
 	int dst_offset, src_offset, blank_offset;
-	g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, GAME_SCREEN_H);
 	if (data) {
 		g_res.map = (uint8_t *)malloc(MAP_W*MAP_H);
 		video_copy_map(data);
 		video_clear();
 		if (g_res.map) {
-			const int y_offs = (GAME_SCREEN_H - 200) / 2;
 			const uint16_t pos_y = spr_pos[0][g_vars.level_num];
 			const uint16_t pos_x = spr_pos[1][g_vars.level_num];
 			g_sys.set_screen_palette(palettes_tbl[pal], 0, 16, 6);
 			video_load_sprites();
-			uint16_t pad_w = GAME_SCREEN_W < MAP_W ? 0 : (GAME_SCREEN_W - MAP_W) / 2;
-			for (uint16_t x = 1; x <= MAP_W + pad_w; ++x) { /* 640*200*4bpp pic */
+			for (uint16_t x = 1; x <= MAP_W + (GAME_SCREEN_W < MAP_W ? 0 : (GAME_SCREEN_W - MAP_W) / 2); ++x) { /* 640*200*4bpp pic */
+				video_resize();
+				uint16_t y_offs = (GAME_SCREEN_H - 200) / 2;
 				uint16_t pitch = MIN(x, GAME_SCREEN_W);
 				uint16_t window_w = x < GAME_SCREEN_W ? 0 : x - GAME_SCREEN_W;
+				g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, GAME_SCREEN_H);
 				video_draw_sprite(spr, GAME_SCREEN_W - x + pos_x, pos_y + y_offs, 0);
 				for (uint8_t y = 0; y < MAP_H; ++y) {
 					dst_offset = (y_offs + y) * GAME_SCREEN_W + GAME_SCREEN_W - pitch,
@@ -246,7 +262,6 @@ static void do_menu() {
 		g_sys.set_screen_palette(data, 0, 256, 6);
 		update_screen_img(data + 768, 0);
 		g_sys.fade_in_palette();
-		free(data);
 		memset(g_vars.input.keystate, 0, sizeof(g_vars.input.keystate));
 		while (!g_sys.input.quit) {
 			update_input();
@@ -259,8 +274,13 @@ static void do_menu() {
 				g_sys.fade_out_palette();
 				break;
 			}
+			if (g_sys.resize) {
+				update_screen_img(data + 768, 0);
+				g_sys.update_screen(g_res.vga, 1);
+			}
 			g_sys.sleep(30);
 		}
+		free(data);
 	}
 }
 
@@ -283,11 +303,14 @@ void input_check_ctrl_alt_w() {
 void do_theend_screen() {
 	uint8_t *data = load_file("THEEND.SQZ");
 	if (data) {
-		g_sys.set_screen_palette(data, 0, 256, 6);
-		update_screen_img(data + 768, 0);
-		g_sys.fade_in_palette();
-		free(data);
-		wait_input(10000);
+		do {
+			video_resize();
+			g_sys.set_screen_palette(data, 0, 256, 6);
+			update_screen_img(data + 768, 0);
+			g_sys.fade_in_palette();
+			free(data);
+			wait_input(10000);
+		} while (g_sys.resize);
 	}
 	time_t now;
 	time(&now);
@@ -374,7 +397,7 @@ static void game_run(const char *data_path) {
 		}
 		uint8_t level_num;
 		do {
-			g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+			g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, TILEMAP_SCREEN_H);
 			level_num = g_vars.level_num;
 			if (g_vars.level_num >= 8 && g_vars.level_num < 10 && 0 /* !g_vars.level_expert_flag */ ) {
 				do_castle_screen();

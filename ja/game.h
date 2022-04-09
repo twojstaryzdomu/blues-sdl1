@@ -220,6 +220,7 @@ extern void	ja_decode_chr(const uint8_t *buffer, const int size, uint8_t *dst, i
 extern void	ja_decode_tile(const uint8_t *buffer, uint8_t pal_mask, uint8_t *dst, int dst_pitch, int x, int y);
 extern void	ja_decode_motif(int num, uint8_t color);
 extern void	video_load_sprites();
+extern void	video_resize();
 
 /* sound.c */
 extern void	sound_init();

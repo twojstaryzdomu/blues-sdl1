@@ -31,7 +31,7 @@ static struct sprite_t _sprites[MAX_SPRITES];
 static int _sprites_count;
 static SDL_Rect _sprites_cliprect;
 
-static int _screen_w, _screen_h;
+static int _window_w, _window_h;
 static int _shake_dx, _shake_dy;
 static uint32_t flags, rmask, gmask, bmask, amask;
 static SDL_Surface *_renderer;
@@ -44,6 +44,14 @@ static uint32_t *_screen_buffer;
 static int _copper_color_key;
 static uint32_t _copper_palette[COPPER_BARS_H];
 static bool _hybrid_color;
+static const char *_caption;
+static bool _fullscreen;
+static bool _hybrid_color;
+
+static int _orig_w, _orig_h;
+static bool _size_lock;
+static bool _orig_fullscreen;
+static bool _orig_color;
 
 static SDL_Joystick *_joystick;
 
@@ -65,7 +73,7 @@ static int sdl2_init() {
 	#endif
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | (g_sys.audio ? SDL_INIT_AUDIO : 0));
 	SDL_ShowCursor(SDL_DISABLE);
-	_screen_w = _screen_h = 0;
+	g_sys.w = g_sys.h = 0;
 	memset(_screen_palette, 0, sizeof(_screen_palette));
 	_palette = SDL_AllocPalette(256);
 	_screen_buffer = 0;
@@ -84,6 +92,9 @@ static int sdl2_init() {
 }
 
 static void sdl2_fini() {
+	if (_fullscreen && _renderer->flags & SDL_FULLSCREEN) {
+		SDL_WM_ToggleFullScreen(_renderer);
+	}
 	if (_texture) {
 		SDL_FreeSurface(_texture);
 		_texture = 0;
@@ -101,27 +112,48 @@ static void sdl2_fini() {
 }
 
 static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscreen, bool hybrid_color) {
-	assert(_screen_w == 0 && _screen_h == 0); // abort if called more than once
-	_screen_w = w;
-	_screen_h = h;
+	_caption = caption;
+	_fullscreen = fullscreen;
+	int screen_w = MAX(w, 320);
+	int screen_h = MAX(h, 200);
+	if (!_size_lock) {
+		g_sys.w = screen_w;
+		g_sys.h = screen_h;
+	}
+	if (!_orig_w) {
+		_orig_w = screen_w;
+		_orig_h = screen_h;
+		_orig_fullscreen = fullscreen;
+		_orig_color = hybrid_color;
+		fprintf(stderr, "Original window size: %dx%d Fullscreen: %s Hybrid colour: %s\n", _orig_w, _orig_h, _orig_fullscreen ? "on" : "off", _orig_color ? "on" : "off");
+	}
 	flags = fullscreen ? SDL_FULLSCREEN : 0;
 	flags |= SDL_HWPALETTE;
 	flags |= SDL_RESIZABLE;
 	flags |= SDL_DOUBLEBUF;
 	flags |= SDL_ASYNCBLIT;
 	flags |= SDL_ANYFORMAT;
-	const int window_w = w;
-	const int window_h = h;
-	_renderer = SDL_SetVideoMode(window_w, window_h, 8, flags);
+	if (_renderer)
+		SDL_FreeSurface(_renderer);
+	_renderer = SDL_SetVideoMode(screen_w, screen_h, 8, flags);
 	if(!_renderer){
 		printf("Couldn't set video mode: %s\n", SDL_GetError());
 		exit(-1);
 	}
 	SDL_WM_SetCaption(caption, 0);
-	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", _screen_w, _screen_h);
-	_screen_buffer = (uint32_t *)calloc(_screen_w * _screen_h, sizeof(uint32_t));
+	fprintf(stderr, "Size: %dx%d", g_sys.w, g_sys.h);
+	if (g_sys.w != _window_w && g_sys.h != _window_h)
+		fprintf(stderr, " Window: %dx%d", screen_w, screen_w);
+	fprintf(stderr, "\n");
+	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", g_sys.w, g_sys.h);
+	if (_screen_buffer)
+		free(_screen_buffer);
+	_screen_buffer = (uint32_t *)calloc(g_sys.w * g_sys.h, sizeof(uint32_t));
 	if (!_screen_buffer) {
 		print_error("Failed to allocate screen buffer");
+	}
+	if (_texture) {
+		SDL_FreeSurface(_texture);
 	}
 	_texture = SDL_DisplayFormatAlpha(_renderer);
 	_fmt = _renderer->format;
@@ -131,8 +163,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 	}
 	_sprites_cliprect.x = 0;
 	_sprites_cliprect.y = 0;
-	_sprites_cliprect.w = w;
-	_sprites_cliprect.h = h;
+	_sprites_cliprect.w = g_sys.w;
+	_sprites_cliprect.h = g_sys.h;
 	_hybrid_color = hybrid_color;
 }
 
@@ -234,7 +266,7 @@ static void sdl2_set_palette_color(int i, const uint8_t *colors) {
 
 static void fade_palette_helper(int in) {
 	int component = 0;
-	SDL_Surface* surface = SDL_CreateRGBSurface(0, _screen_w, _screen_h, 32, rmask, gmask, bmask, amask);
+	SDL_Surface* surface = SDL_CreateRGBSurface(0, g_sys.w, g_sys.h, 32, rmask, gmask, bmask, amask);
 	for (int i = 0; i <= FADE_STEPS; ++i) {
 		int alpha = 255 * i / FADE_STEPS;
 		if (in) {
@@ -301,32 +333,37 @@ static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transiti
 	} while (((r.x > r.x % step_w && open) || (r.y < s->h / 2 && !open)) && (type == TRANSITION_CURTAIN || r.y > r.y % step_h));
 }
 
+static void sdl2_resize_screen() {
+	sdl2_set_screen_size(_window_w, _window_h, _caption, _fullscreen, _hybrid_color);
+}
+
 static void sdl2_update_screen(const uint8_t *p, int present) {
 	if (_copper_color_key != -1) {
-		for (int j = 0; j < _screen_h; ++j) {
+		for (int j = 0; j < g_sys.h; ++j) {
 			if (j / 2 < COPPER_BARS_H) {
 				const uint32_t line_color = _copper_palette[j / 2];
-				for (int i = 0; i < _screen_w; ++i) {
-					_screen_buffer[j * _screen_w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
+				for (int i = 0; i < g_sys.w; ++i) {
+					_screen_buffer[j * g_sys.w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
 				}
 			} else {
-				for (int i = 0; i < _screen_w; ++i) {
-					_screen_buffer[j * _screen_w + i] = _screen_palette[p[i]];
+				for (int i = 0; i < g_sys.w; ++i) {
+					_screen_buffer[j * g_sys.w + i] = _screen_palette[p[i]];
 				}
 			}
-			p += _screen_w;
+			p += g_sys.w;
 		}
 	} else {
-		for (int i = 0; i < _screen_w * _screen_h; ++i) {
+		for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
 			_screen_buffer[i] = _screen_palette[p[i]];
 		}
 	}
 	SDL_FreeSurface(_texture);
-	_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, _screen_w, _screen_h, 32, _screen_w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
+	_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w, g_sys.h, 32, g_sys.w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
 	if (present) {
-		SDL_Rect r={_shake_dx, _shake_dy, _screen_w, _screen_h};
+		SDL_Rect r={_shake_dx, _shake_dy, g_sys.w, g_sys.h};
 		SDL_FillRect(_renderer, &r, -1);
 		SDL_BlitSurface(_texture, &r, _renderer, 0);
+
 		// sprites
 		SDL_SetClipRect(_renderer, &_sprites_cliprect);
 		for (int i = 0; i < _sprites_count; ++i) {
@@ -404,7 +441,20 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			switch(keysym->mod) {
 			case KMOD_LALT:
-				SDL_WM_ToggleFullScreen(_renderer);
+				if (!_size_lock) {
+					_fullscreen = !_fullscreen;
+					if (g_sys.w == 320 && g_sys.h == 200) {
+						_window_w = _fullscreen ? FULLSCREEN_W : _orig_w;
+						_window_h = _fullscreen ? FULLSCREEN_H : _orig_h;
+					}
+					g_sys.resize = true;
+					g_sys.resize_screen();
+				} else {
+					SDL_WM_ToggleFullScreen(_renderer);
+				}
+				fprintf(stderr, "Toggling fullscreen %s\n", _fullscreen ? "on" : "off");
+				_fullscreen = _renderer->flags & SDL_FULLSCREEN;
+				print_debug(DBG_SYSTEM, "Fullscreen is %s", _fullscreen ? "on" : "off");
 			default:
 				break;
 			}
@@ -427,11 +477,25 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_3:
 		input->digit3 = keydown;
 		break;
+	case SDLK_o:
+		if (keydown) {
+			fprintf(stderr, "Restoring original window size %dx%d, fullscreen %d\n", _orig_w, _orig_h, _orig_fullscreen);
+			g_sys.resize = true;
+			_size_lock = false;
+			sdl2_set_screen_size(_orig_w, _orig_h, _caption, _orig_fullscreen, _orig_color);
+		}
+		break;
 	case SDLK_p:
 		if (keydown) {
 			*paused = (bool)(*paused ? false : true);
 			if (g_sys.audio)
 				SDL_PauseAudio(*paused);
+		}
+		break;
+	case SDLK_s:
+		if (keydown) {
+			_size_lock = !_size_lock;
+			fprintf(stderr, "Screen size is %s\n", _size_lock ? "locked" : "unlocked");
 		}
 		break;
 	default:
@@ -518,6 +582,12 @@ static int handle_event(const SDL_Event *ev) {
 			if (g_sys.audio)
 				SDL_PauseAudio(g_sys.paused);
 		}
+		break;
+	case SDL_VIDEORESIZE:
+		_window_w = ev->resize.w;
+		_window_h = ev->resize.h;
+		g_sys.resize = true;
+		g_sys.resize_screen();
 		break;
 	case SDL_KEYUP:
 		handle_keyevent(&ev->key.keysym, 0, &g_sys.input, &g_sys.paused);
@@ -679,6 +749,7 @@ struct sys_t g_sys = {
 	.set_palette_color = sdl2_set_palette_color,
 	.fade_in_palette = sdl2_fade_in_palette,
 	.fade_out_palette = sdl2_fade_out_palette,
+	.resize_screen = sdl2_resize_screen,
 	.update_screen = sdl2_update_screen,
 	.shake_screen = sdl2_shake_screen,
 	.transition_screen = sdl2_transition_screen,

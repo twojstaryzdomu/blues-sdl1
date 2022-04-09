@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stdout, "No data files found\n");
 	} else {
 		g_sys.init();
-		g_sys.set_screen_size(GAME_SCREEN_W, GAME_SCREEN_H, game->name, fullscreen, g_options.hybrid_color);
+		g_sys.set_screen_size(g_options.screen_w, g_options.screen_h, game->name, fullscreen, g_options.hybrid_color);
 		game->run(data_path);
 		g_sys.fini();
 	}

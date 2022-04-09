@@ -41,8 +41,25 @@ Compared to the original DOS executables, the rewritten engines feature:
 
 - horizontal scrolling
 - configurable screen size
+- dynamically resizable window to control game screen size
+- in-game screen controls for screen size
 - game cheats: unlimited lifes and energy, no hit
 - game pad support with a user-defined jump button
+
+## Screen controls
+
+In addition to the default controls, the engine provides several convenience
+in-game keys for display control.
+
+The screen size lock allows to hold a given game screen size whilst manipulating
+the window.
+
+|     Key     |               Function               |
+|:-----------:|:-------------------------------------|
+|      O      | Restore original screen size         |
+|      P      | Pause game                           |
+|      S      | Toggle screen size lock              |
+| ALT + Enter | Toggle fullscreen <=> windowed mode  |
 
 ## Running
 
