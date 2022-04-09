@@ -32,6 +32,9 @@ static int _sprites_count;
 static SDL_Rect _sprites_cliprect;
 
 static int _window_w, _window_h;
+#if defined(HAVE_X11)
+static int _fullscreen_w, _fullscreen_h;
+#endif
 static int _shake_dx, _shake_dy;
 static uint32_t flags, rmask, gmask, bmask, amask;
 static SDL_Surface *_renderer;
@@ -54,6 +57,25 @@ static bool _orig_fullscreen;
 static bool _orig_color;
 
 static SDL_Joystick *_joystick;
+
+#if defined(HAVE_X11)
+#include <X11/Xlib.h>
+#include <X11/extensions/Xrandr.h>
+static void x11_set_fullscreen_size(int *w, int *h) {
+	Display *display = XOpenDisplay(NULL);
+	XRRScreenResources *screens = XRRGetScreenResources(display, DefaultRootWindow(display));
+	XRRCrtcInfo *info = NULL;
+	for (int i = 0; i < screens->ncrtc; i++) {
+		info = XRRGetCrtcInfo(display, screens, screens->crtcs[i]);
+		if (*w < info->width) {
+			*w = info->width;
+			*h = info->height;
+		}
+		XRRFreeCrtcInfo(info);
+	}
+	XRRFreeScreenResources(screens);
+}
+#endif
 
 static int sdl2_init() {
 	print_debug(DBG_SYSTEM, "Byte order is %s endian", SDL_BYTEORDER == SDL_BIG_ENDIAN ? "big" : "little");
@@ -88,6 +110,10 @@ static int sdl2_init() {
 			}
 		}
 	}
+	#if defined(HAVE_X11)
+		x11_set_fullscreen_size(&_fullscreen_w, &_fullscreen_h);
+		fprintf(stderr, "Fullscreen size: %dx%d\n", _fullscreen_w, _fullscreen_h);
+	#endif
 	return 0;
 }
 
@@ -443,10 +469,15 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			case KMOD_LALT:
 				if (!_size_lock) {
 					_fullscreen = !_fullscreen;
-					if (g_sys.w == 320 && g_sys.h == 200) {
-						_window_w = _fullscreen ? FULLSCREEN_W : _orig_w;
-						_window_h = _fullscreen ? FULLSCREEN_H : _orig_h;
-					}
+					#if defined(HAVE_X11)
+						_window_w = _fullscreen ? _fullscreen_w : _orig_w;
+						_window_h = _fullscreen ? _fullscreen_h : _orig_h;
+					#else
+						if (g_sys.w == 320 && g_sys.h == 200) {
+							_window_w = _fullscreen ? FULLSCREEN_W : _orig_w;
+							_window_h = _fullscreen ? FULLSCREEN_H : _orig_h;
+						}
+					#endif
 					g_sys.resize = true;
 					g_sys.resize_screen();
 				} else {

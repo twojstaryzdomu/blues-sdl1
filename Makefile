@@ -16,6 +16,10 @@ OBJS := $(SRCS:.c=.o)
 DEPS := $(SRCS:.c=.d)
 
 CPPFLAGS += -Wall -Wpedantic -MMD $(SDL_CFLAGS) -I. -g
+ifdef X11
+CFLAGS += -DHAVE_X11=yes
+LDFLAGS += -lX11 -lXrandr
+endif
 
 all: blues bbja pre2
 
