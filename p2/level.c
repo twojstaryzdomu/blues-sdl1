@@ -23,7 +23,20 @@ static void level_player_death_animation();
 static const uint8_t next_level_tbl[] = { 0xFF, 0x0C, 0x0B, 0x0A, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0x0E };
 
 static void set_level_palette() {
-	g_sys.set_screen_palette(palettes_tbl[(g_options.palette ? g_options.palette : g_vars.level_num)], 0, 16, 6);
+	if (!g_sys.palette_offset) {
+		g_vars.palette = g_options.palette ? g_options.palette : g_vars.level_num;
+	} else {
+		g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
+		sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
+		g_vars.message.timelimit = 500;
+		g_sys.add_message(g_vars.message.s);
+	}
+	const uint8_t *palette 	= !g_sys.palette_offset
+				? palettes_tbl[g_vars.palette]
+				: unique_palettes_tbl[g_vars.palette];
+	g_sys.set_screen_palette(palette, 0, 16, 6);
+	g_sys.reset_palette = 0;
+	g_sys.palette_offset = 0;
 }
 
 static int load_level_data_get_tilemap_size(int num, const uint8_t *lev, const uint8_t *uni) {
@@ -3325,7 +3338,6 @@ static void level_sync() {
 	}
 	if (g_sys.reset_palette) {
 		set_level_palette();
-		g_sys.reset_palette = 0;
 	}
 	g_sys.update_screen(g_res.vga, 1);
 	g_sys.render_clear_sprites();
