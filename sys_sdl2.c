@@ -53,6 +53,8 @@ static bool _orig_fullscreen;
 static char const *_orig_filter;
 static bool _orig_color;
 
+static char _s[MESSAGE_MAX];
+
 static SDL_GameController *_controller;
 static SDL_Joystick *_joystick;
 static int _controller_up;
@@ -151,6 +153,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	} else {
 		_scale = MAX(_scale - 1, 1);
 		print_warning("Unable to fit %dx scaled %dx%d screen within %dx%d window bounds", scale, screen_w, screen_h, _window_w, _window_h, _scale);
+		sprintf(_s, "Unable to scale to %d", scale);
+		g_sys.add_message(_s);
 		return; // refuse to resize when not possible to fit window within bounds
 	}
 	if (!_size_lock) {
@@ -395,6 +399,7 @@ static void sdl2_rehint_screen(const char *f) {
 	g_sys.rehint = true;
 	g_sys.resize_screen();
 	fprintf(stderr, "Set hint quality %s\n", _filter);
+	g_sys.add_message((char *)_filter);
 }
 
 static void sdl2_update_screen(const uint8_t *p, int present) {
@@ -553,7 +558,8 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 	case SDLK_s:
 		if (keydown) {
 			_size_lock = !_size_lock;
-			fprintf(stderr, "Screen size is %s\n", _size_lock ? "locked" : "unlocked");
+			sprintf(_s, "Size %s", _size_lock ? "locked" : "unlocked");
+			g_sys.add_message(_s);
 		}
 		break;
 	case SDLK_t:
@@ -913,6 +919,40 @@ static void render_set_sprites_clipping_rect(int x, int y, int w, int h) {
 	_sprites_cliprect.h = h;
 }
 
+static void add_message(char *m) {
+	int j;
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (g_sys.message_queue[i] && strcmp(m, g_sys.message_queue[i]) == 0)
+			return;
+	}
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (!g_sys.message_queue[i])
+			j = i;
+	}
+	g_sys.message_queue[ 0 + j ] = m;
+}
+
+static char* get_message() {
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (g_sys.message_queue[i])
+			return g_sys.message_queue[i];
+	}
+	return 0;
+}
+
+static void clear_message(const char *m) {
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (g_sys.message_queue[i] && strcmp(m, g_sys.message_queue[i]) == 0)
+			g_sys.message_queue[i] = 0;
+	}
+}
+
+static void clear_messages() {
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		g_sys.message_queue[i] = 0;
+	}
+}
+
 struct sys_t g_sys = {
 	.init = sdl2_init,
 	.fini = sdl2_fini,
@@ -938,5 +978,9 @@ struct sys_t g_sys = {
 	.render_unload_sprites = render_unload_sprites,
 	.render_add_sprite = render_add_sprite,
 	.render_clear_sprites = render_clear_sprites,
-	.render_set_sprites_clipping_rect = render_set_sprites_clipping_rect
+	.render_set_sprites_clipping_rect = render_set_sprites_clipping_rect,
+	.add_message = add_message,
+	.get_message = get_message,
+	.clear_message = clear_message,
+	.clear_messages = clear_messages
 };

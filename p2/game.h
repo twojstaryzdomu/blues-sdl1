@@ -315,6 +315,11 @@ struct vars_t {
 		uint8_t energy;
 		uint8_t bonus_letters_mask;
 	} panel;
+	struct {
+		char s[MESSAGE_MAX];
+		uint32_t timestamp;
+		uint32_t timelimit;
+	} message;
 };
 
 extern struct vars_t g_vars;
@@ -379,7 +384,7 @@ extern void	video_draw_panel_number(int offset, int num);
 extern void	video_draw_number(int offset, int num);
 extern void	video_draw_character_spr(int offset, uint8_t chr);
 extern void	video_draw_string2(int offset, const char *str);
-extern void	video_draw_centred_string(const char *s);
+extern void	video_draw_centred_string(const char *s, bool clip);
 extern void	video_draw_tile(const uint8_t *src, int x, int y);
 extern void	video_convert_tiles(uint8_t *data, int len);
 extern void	video_load_front_tiles();

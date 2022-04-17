@@ -107,16 +107,23 @@ void video_draw_string2(int offset, const char *s) {
 	}
 }
 
-void video_draw_centred_string(const char *s) {
-	int l = strlen(s);
+void video_draw_centred_string(const char *s, bool clip) {
+	const uint8_t l = strlen(s);
 	int x = (TILEMAP_SCREEN_W - STRING_SPR_W * l) / 2;
-	int y = (TILEMAP_SCREEN_H - STRING_SPR_H) / 2;
-	const int uppercase_offset = 65;
-	g_sys.render_set_sprites_clipping_rect(x, y, STRING_SPR_W * l, STRING_SPR_H);
+	const int y = (TILEMAP_SCREEN_H - STRING_SPR_H) / 2;
+	const uint8_t uppercase_offset = 65;
+	const uint8_t lowercase_offset = 32;
+	const uint8_t number_offset = 6;
+	const uint8_t digits_ascii = '0' + 9;
+	if (clip) {
+		g_sys.render_set_sprites_clipping_rect(x, y, STRING_SPR_W * l, STRING_SPR_H);
+	}
 	while (*s) {
 		const uint8_t chr = *s++;
 		if (chr != ' ') {
-			video_draw_sprite(CHARACTER_OFFSET + chr - uppercase_offset, x, y, 0);
+			uint8_t offset = chr > digits_ascii ? uppercase_offset : number_offset;
+			offset += chr > lowercase_offset + uppercase_offset - 1 ? lowercase_offset : 0;
+			video_draw_sprite(CHARACTER_OFFSET + chr - offset, x, y, 0);
 		}
 		x += STRING_SPR_W;
 	}
