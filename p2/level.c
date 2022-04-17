@@ -3114,6 +3114,13 @@ static void level_clear_items_spr_num_tbl() {
 	g_vars.level_items_total_count = 0;
 }
 
+static void level_clear_monsters() {
+	for (int i = 0; i < MONSTERS_COUNT; ++i) {
+		struct object_t *obj = &g_vars.objects_tbl[MONSTERS_OFFSET + i];
+		obj->spr_num = 0xFFFF;
+	}
+}
+
 static bool level_update_objects_anim() {
 	if (g_vars.level_completed_flag == 1) {
 		if (g_vars.level_num < 10) {
@@ -3632,6 +3639,7 @@ static void level_completed_bonuses_animation() {
 	g_vars.objects_tbl[PLAYER_OFFSET].data.p.hdir = 0;
 	g_vars.objects_tbl[PLAYER_OFFSET].x_velocity = 0;
 	level_completed_bonuses_animation_draw_score();
+	level_clear_monsters();
 	g_vars.player_flying_flag = 0;
 	g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim = object_anim_tbl[1];
 	while (1) {
