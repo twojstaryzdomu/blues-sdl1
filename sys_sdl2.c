@@ -198,9 +198,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	}
 	if (!_renderer) {
 		_renderer = SDL_CreateRenderer(_window, -1, 0);
-	} else {
-		SDL_RenderSetLogicalSize(_renderer, g_sys.w, g_sys.h);
 	}
+	SDL_RenderSetLogicalSize(_renderer, g_sys.w, g_sys.h);
 	SDL_RenderSetScale(_renderer, _scale, _scale);
 	fprintf(stderr, "Window size: %dx%d, game size: %dx%d, scale: %d\n", _window_w, _window_h, g_sys.w, g_sys.h, _scale);
 	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", w, h);
