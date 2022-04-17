@@ -522,6 +522,14 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 	case SDLK_3:
 		input->digit3 = keydown;
 		break;
+	case SDLK_a:
+		if (keydown) {
+			g_sys.audio = !g_sys.audio;
+			SDL_PauseAudio(!g_sys.audio);
+			sprintf(_s, "Sound %s", g_sys.audio ? "on" : "off");
+			g_sys.add_message(_s);
+		}
+		break;
 	case SDLK_d:
 		if (keydown)
 			sdl2_rescale_screen(-1);

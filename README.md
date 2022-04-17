@@ -57,6 +57,7 @@ the window or scale.
 
 |     Key     |               Function               |
 |:-----------:|:-------------------------------------|
+|      A      | Toggle audio                         |
 |      D      | Decrease scale                       |
 |      I      | Increase scale                       |
 |      L      | Set scaling filter to linear         |
