@@ -15,6 +15,9 @@
 #define RENDER_SPR_LEVEL 1 /* level sprites */
 #define RENDER_SPR_FG    2 /* foreground tiles */
 
+#define ORIG_W 320
+#define ORIG_H 200
+
 #define FULLSCREEN_W 640
 #define FULLSCREEN_H 360
 

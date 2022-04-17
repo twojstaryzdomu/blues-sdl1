@@ -146,8 +146,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	_window_h = h;
 	_caption = caption;
 	_filter = filter;
-	const int screen_w = MAX(w / scale, 320);
-	const int screen_h = MAX(h / scale, 200);
+	const int screen_w = MAX(w / scale, ORIG_W);
+	const int screen_h = MAX(h / scale, ORIG_H);
 	if (screen_w * scale <= _window_w && screen_h * scale <= _window_h) {
 		_scale = MAX(scale, 1);
 	} else {
