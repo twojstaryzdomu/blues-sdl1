@@ -175,7 +175,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	if (!_orig_w) {
 		_orig_w = _window_w;
 		_orig_h = _window_h;
-		_orig_scale = _scale;
+		_orig_scale = scale;
 		_orig_fullscreen = _fullscreen;
 		_orig_filter = _filter;
 		_orig_color = _hybrid_color;
