@@ -3316,6 +3316,10 @@ static void level_sync() {
 		level_draw_messages();
 		g_sys.rehint = false;
 	}
+	if (g_sys.reset_palette) {
+		set_level_palette();
+		g_sys.reset_palette = 0;
+	}
 	g_sys.update_screen(g_res.vga, 1);
 	g_sys.render_clear_sprites();
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();

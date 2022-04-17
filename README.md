@@ -59,6 +59,7 @@ the window or scale.
 |:-----------:|:-------------------------------------|
 |      A      | Toggle audio                         |
 |      D      | Decrease scale                       |
+|      H      | Toggle Hybrid crack palette bug      |
 |      I      | Increase scale                       |
 |      L      | Set scaling filter to linear         |
 |      N      | Set scaling filter to nearest        |

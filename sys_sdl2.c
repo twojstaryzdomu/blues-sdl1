@@ -534,6 +534,15 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 		if (keydown)
 			sdl2_rescale_screen(-1);
 		break;
+	case SDLK_h:
+		if (keydown) {
+			_hybrid_color = !_hybrid_color;
+			g_sys.reset_palette = true;
+			g_sys.resize_screen();
+			sprintf(_s, "Hybrid colour %s", _hybrid_color ? "on" : "off");
+			g_sys.add_message(_s);
+		}
+		break;
 	case SDLK_i:
 		if (keydown)
 			sdl2_rescale_screen(1);

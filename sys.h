@@ -81,6 +81,7 @@ struct sys_t {
 	bool	audio;
 	bool	resize;
 	bool	rehint;
+	bool	reset_palette;
 	int	w, h;
 };
 
