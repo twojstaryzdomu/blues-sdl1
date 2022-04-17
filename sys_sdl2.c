@@ -309,6 +309,28 @@ static void sdl2_set_palette_color(int i, const uint8_t *colors) {
 	_screen_palette[i] = SDL_MapRGB(_fmt, r, g, b);
 }
 
+static void sdl2_update_sprites_screen() {
+	SDL_RenderSetClipRect(_renderer, &_sprites_cliprect);
+	for (int i = 0; i < _sprites_count; ++i) {
+		const struct sprite_t *spr = &_sprites[i];
+		struct spritesheet_t *sheet = &_spritesheets[spr->sheet];
+		if (spr->num >= sheet->count) {
+			continue;
+		}
+		SDL_Rect r;
+		r.x = spr->x + _shake_dx;
+		r.y = spr->y + _shake_dy;
+		r.w = sheet->r[spr->num].w;
+		r.h = sheet->r[spr->num].h;
+		if (!spr->xflip) {
+			SDL_RenderCopy(_renderer, sheet->texture, &sheet->r[spr->num], &r);
+		} else {
+			SDL_RenderCopyEx(_renderer, sheet->texture, &sheet->r[spr->num], &r, 0., 0, SDL_FLIP_HORIZONTAL);
+		}
+	}
+	SDL_RenderSetClipRect(_renderer, 0);
+}
+
 static void fade_palette_helper(int in) {
 	SDL_SetRenderDrawBlendMode(_renderer, SDL_BLENDMODE_BLEND);
 	SDL_Rect r;
@@ -323,10 +345,12 @@ static void fade_palette_helper(int in) {
 		SDL_RenderClear(_renderer);
 		if (_texture)
 			SDL_RenderCopy(_renderer, _texture, 0, 0);
+		sdl2_update_sprites_screen();
 		SDL_RenderFillRect(_renderer, &r);
 		SDL_RenderPresent(_renderer);
 		SDL_Delay(30);
 	}
+	g_sys.render_clear_sprites();
 }
 
 static void sdl2_fade_in_palette() {
@@ -431,28 +455,7 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 		r.h = g_sys.h;
 		SDL_RenderClear(_renderer);
 		SDL_RenderCopy(_renderer, _texture, 0, &r);
-
-		// sprites
-		SDL_RenderSetClipRect(_renderer, &_sprites_cliprect);
-		for (int i = 0; i < _sprites_count; ++i) {
-			const struct sprite_t *spr = &_sprites[i];
-			struct spritesheet_t *sheet = &_spritesheets[spr->sheet];
-			if (spr->num >= sheet->count) {
-				continue;
-			}
-			SDL_Rect r;
-			r.x = spr->x + _shake_dx;
-			r.y = spr->y + _shake_dy;
-			r.w = sheet->r[spr->num].w;
-			r.h = sheet->r[spr->num].h;
-			if (!spr->xflip) {
-				SDL_RenderCopy(_renderer, sheet->texture, &sheet->r[spr->num], &r);
-			} else {
-				SDL_RenderCopyEx(_renderer, sheet->texture, &sheet->r[spr->num], &r, 0., 0, SDL_FLIP_HORIZONTAL);
-			}
-		}
-		SDL_RenderSetClipRect(_renderer, 0);
-
+		sdl2_update_sprites_screen();
 		SDL_RenderPresent(_renderer);
 	}
 }
