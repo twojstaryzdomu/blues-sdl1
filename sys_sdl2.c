@@ -23,6 +23,7 @@ struct sprite_t {
 	int num;
 	int x, y;
 	bool xflip;
+	bool centred;
 };
 
 static struct sprite_t _sprites[MAX_SPRITES];
@@ -31,6 +32,7 @@ static SDL_Rect _sprites_cliprect;
 
 static int _window_w, _window_h;
 static int _shake_dx, _shake_dy;
+static int _centred_x_offset, _centred_y_offset;
 static SDL_Window *_window;
 static SDL_Renderer *_renderer;
 static SDL_Texture *_texture;
@@ -161,6 +163,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 		g_sys.w = screen_w;
 		g_sys.h = screen_h;
 	}
+	_centred_x_offset = (g_sys.w - ORIG_W) / 2;
+	_centred_y_offset = (g_sys.h - ORIG_H) / 2;
 	if (!filter || strcmp(filter, "nearest") == 0) {
 		SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "0", SDL_HINT_OVERRIDE);
 	} else if (strcmp(filter, "linear") == 0) {
@@ -321,6 +325,10 @@ static void sdl2_update_sprites_screen() {
 		r.y = spr->y + _shake_dy;
 		r.w = sheet->r[spr->num].w;
 		r.h = sheet->r[spr->num].h;
+		if (spr->centred) {
+			r.x += _centred_x_offset;
+			r.y += _centred_y_offset;
+		}
 		if (!spr->xflip) {
 			SDL_RenderCopy(_renderer, sheet->texture, &sheet->r[spr->num], &r);
 		} else {
@@ -931,7 +939,7 @@ static void render_unload_sprites(int spr_type) {
 	memset(sheet, 0, sizeof(struct spritesheet_t));
 }
 
-static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip) {
+static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip, bool centred) {
 	assert(_sprites_count < MAX_SPRITES);
 	struct sprite_t *spr = &_sprites[_sprites_count];
 	spr->sheet = spr_type;
@@ -939,6 +947,7 @@ static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip) 
 	spr->x = x;
 	spr->y = y;
 	spr->xflip = xflip;
+	spr->centred = centred;
 	++_sprites_count;
 }
 

@@ -83,8 +83,6 @@ static void do_select_player() {
 	do {
 		screen_resize();
 		screen_init();
-		offset_x = (GAME_SCREEN_W > 320) ? (GAME_SCREEN_W - 320) / 2 : 0;
-		offset_y = (GAME_SCREEN_H > 200) ? (GAME_SCREEN_H - 200) / 2 : 0;
 		load_img(g_res.amiga_data ? "choix.lbm" : "choix.sqz", GAME_SCREEN_W, g_options.cga_colors ? 1 : -1);
 		screen_copy_centred(g_res.vga, 320, 200);
 		if (g_res.spr_count <= SPRITES_COUNT) {
@@ -98,13 +96,13 @@ static void do_select_player() {
 			const uint32_t timestamp = g_sys.get_timestamp();
 			switch (state) {
 			case 0:
-				screen_add_sprite(95 + offset_x, 155 + offset_y, animframe_0135[frame1]);
+				screen_add_sprite(95, 155, animframe_0135[frame1], true);
 				if (frame1 < animframe_0135[0]) {
 					++frame1;
 				} else {
 					frame1 = 1;
 				}
-				screen_add_sprite(190 + offset_x, 155 + offset_y, animframe_01d5[frame2]);
+				screen_add_sprite(190, 155, animframe_01d5[frame2], true);
 				if (frame2 < animframe_01d5[0]) {
 					++frame2;
 				} else {
@@ -137,13 +135,13 @@ static void do_select_player() {
 				}
 				break;
 			case 1:
-				screen_add_sprite(95 + offset_x, 155 + offset_y, animframe_00dd[frame1]);
+				screen_add_sprite(95, 155, animframe_00dd[frame1], true);
 				if (frame1 < animframe_00dd[0]) {
 					++frame1;
 				} else {
 					frame1 = 4;
 				}
-				screen_add_sprite(190 + offset_x, 155 + offset_y, animframe_022d[frame2]);
+				screen_add_sprite(190, 155, animframe_022d[frame2], true);
 				if (frame2 < animframe_022d[0]) {
 					++frame2;
 				} else {
@@ -176,13 +174,13 @@ static void do_select_player() {
 				}
 				break;
 			case 2:
-				screen_add_sprite(95 + offset_x, 155 + offset_y, animframe_0135[frame1]);
+				screen_add_sprite(95, 155, animframe_0135[frame1], true);
 				if (frame1 < animframe_0135[0]) {
 					++frame1;
 				} else {
 					frame1 = 1;
 				}
-				screen_add_sprite(190 + offset_x, 155 + offset_y, animframe_022d[frame2]);
+				screen_add_sprite(190, 155, animframe_022d[frame2], true);
 				if (frame2 < animframe_022d[0]) {
 					++frame2;
 				} else {
@@ -233,14 +231,14 @@ static void do_select_player() {
 
 static void do_inter_screen_helper(int xpos, int ypos, int c) {
 	for (int i = 0; i < 40; ++i) {
-		screen_add_sprite(xpos + 20 - 1 - i, ypos - 20 + 1 + i, 125);
+		screen_add_sprite(xpos + 20 - 1 - i, ypos - 20 + 1 + i, 125, true);
 		if (c != 0) {
 			screen_vsync();
 		}
 		screen_clear_sprites();
 	}
 	for (int i = 0; i < 40; ++i) {
-		screen_add_sprite(xpos - 20 + 1 + i, ypos - 20 + 1 + i, 125);
+		screen_add_sprite(xpos - 20 + 1 + i, ypos - 20 + 1 + i, 125, true);
 		if (c != 0) {
 			screen_vsync();
 		}
@@ -261,21 +259,21 @@ static void do_inter_screen() {
 		screen_clear_sprites();
 		if (g_vars.level > 1) {
 			for (int i = 0; i < g_vars.level - 1; ++i) {
-				do_inter_screen_helper(xpos[i] + offset_x, ypos[i] + offset_y, 0);
+				do_inter_screen_helper(xpos[i], ypos[i], 0);
 			}
 		}
 		if (g_vars.level == MAX_LEVELS - 1) {
-			do_inter_screen_helper(xpos[g_vars.level] + offset_x, ypos[g_vars.level] + offset_y, 0);
+			do_inter_screen_helper(xpos[g_vars.level], ypos[g_vars.level], 0);
 		}
 		g_sys.fade_in_palette();
 		if (g_vars.level > 0 && g_vars.level < MAX_LEVELS - 1) {
-			do_inter_screen_helper(xpos[g_vars.level - 1] + offset_x, ypos[g_vars.level - 1] + offset_y, 1);
+			do_inter_screen_helper(xpos[g_vars.level - 1], ypos[g_vars.level - 1], 1);
 		}
 		screen_do_transition2();
 		screen_flip();
 		if (g_vars.level < MAX_LEVELS - 1) {
 			play_sound(SOUND_2);
-			screen_add_sprite(xpos[g_vars.level], ypos[g_vars.level], 126);
+			screen_add_sprite(xpos[g_vars.level], ypos[g_vars.level], 126, true);
 		}
 		screen_flip();
 		const uint32_t timestamp = g_sys.get_timestamp() + 4 * 1000;

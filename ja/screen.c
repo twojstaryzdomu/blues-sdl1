@@ -22,7 +22,7 @@ void video_draw_dot_pattern(int offset) {
 }
 
 void video_draw_sprite(int num, int x, int y, int flag) {
-	g_sys.render_add_sprite(RENDER_SPR_GAME, num, x, y, flag != 0);
+	g_sys.render_add_sprite(RENDER_SPR_GAME, num, x, y, flag != 0, false);
 }
 
 void video_draw_string(const char *s, int offset, int hspace) {

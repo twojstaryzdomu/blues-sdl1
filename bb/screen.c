@@ -20,7 +20,7 @@ void screen_clear_sprites() {
 	g_sys.render_clear_sprites();
 }
 
-static void add_game_sprite(int x, int y, int frame, int xflip) {
+static void add_game_sprite(int x, int y, int frame, int xflip, bool centred) {
 	const uint8_t *p = g_res.spr_frames[frame];
 	if (!p) {
 		print_warning("add_game_sprite missing frame %d", frame);
@@ -32,16 +32,11 @@ static void add_game_sprite(int x, int y, int frame, int xflip) {
 	if (frame >= SPRITES_COUNT) {
 		spr_type = RENDER_SPR_LEVEL;
 		frame -= SPRITES_COUNT;
-	} else {
-		if (y >= 161 && frame >= 120) {
-			x += _offset_x;
-			y += _offset_y;
-		}
 	}
-	g_sys.render_add_sprite(spr_type, frame, x - w / 2, y - h, xflip);
+	g_sys.render_add_sprite(spr_type, frame, x - w / 2, y - h, xflip, centred);
 }
 
-void screen_add_sprite(int x, int y, int frame) {
+void screen_add_sprite(int x, int y, int frame, bool centred) {
 	if (g_res.amiga_data) {
 		switch (frame) {
 		case 125: {
@@ -60,7 +55,7 @@ void screen_add_sprite(int x, int y, int frame) {
 			return;
 		}
 	}
-	add_game_sprite(x, y, frame, 0);
+	add_game_sprite(x, y, frame, 0, centred);
 }
 
 void screen_redraw_sprites() {
@@ -238,12 +233,12 @@ void screen_draw_number(int num, int x, int y, int color) {
 	}
 }
 
-void screen_add_game_sprite1(int x, int y, int frame) {
-	add_game_sprite(x, y + TILEMAP_OFFSET_Y, frame, 0);
+void screen_add_game_sprite1(int x, int y, int frame, bool centred) {
+	add_game_sprite(x, y + TILEMAP_OFFSET_Y, frame, 0, centred);
 }
 
-void screen_add_game_sprite2(int x, int y, int frame) {
-	add_game_sprite(x, y + TILEMAP_OFFSET_Y, frame, 1);
+void screen_add_game_sprite2(int x, int y, int frame, bool centred) {
+	add_game_sprite(x, y + TILEMAP_OFFSET_Y, frame, 1, centred);
 }
 
 void screen_add_game_sprite3(int x, int y, int frame, int blinking_counter) {

@@ -733,9 +733,9 @@ static void do_level_add_sprite1(struct object_t *obj) {
 			}
 		} else {
 			if (obj->facing_left == 0) {
-				screen_add_game_sprite1(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame);
+				screen_add_game_sprite1(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame, false);
 			} else {
-				screen_add_game_sprite2(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame);
+				screen_add_game_sprite2(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame, false);
 			}
 		}
 	}
@@ -769,9 +769,9 @@ static void do_level_add_sprite2(struct object_t *obj) {
 	}
 	if (obj->type != 100) {
 		if (obj->facing_left == 0) {
-			screen_add_game_sprite1(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame);
+			screen_add_game_sprite1(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame, false);
 		} else {
-			screen_add_game_sprite2(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame);
+			screen_add_game_sprite2(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame, false);
 		}
 	}
 }
@@ -817,9 +817,9 @@ static void do_level_add_sprite3(struct object_t *obj) {
 			}
 		} else {
 			if (obj->facing_left == 0) {
-				screen_add_game_sprite1(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame);
+				screen_add_game_sprite1(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame, false);
 			} else {
-				screen_add_game_sprite2(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame);
+				screen_add_game_sprite2(obj->screen_xpos, obj->screen_ypos + 1, obj->anim_frame, false);
 			}
 		}
 	}
@@ -2077,7 +2077,7 @@ static void draw_foreground_tiles() {
 			if (avt_num != 255) {
 				const int tile_y = g_vars.screen_tilemap_yoffset + j * 16 + TILEMAP_OFFSET_Y;
 				const int tile_x = g_vars.screen_tilemap_xoffset + i * 16;
-				g_sys.render_add_sprite(RENDER_SPR_FG, avt_num, tile_x, tile_y, 0);
+				g_sys.render_add_sprite(RENDER_SPR_FG, avt_num, tile_x, tile_y, 0, false);
 			}
 		}
 		++y;

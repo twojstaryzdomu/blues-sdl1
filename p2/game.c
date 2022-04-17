@@ -218,7 +218,7 @@ static void do_map(){
 				uint16_t pitch = MIN(x, GAME_SCREEN_W);
 				uint16_t window_w = x < GAME_SCREEN_W ? 0 : x - GAME_SCREEN_W;
 				g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, GAME_SCREEN_H);
-				video_draw_sprite(spr, GAME_SCREEN_W - x + pos_x, pos_y + y_offs, 0);
+				video_draw_sprite(spr, GAME_SCREEN_W - x + pos_x, pos_y + y_offs, 0, false);
 				for (uint8_t y = 0; y < MAP_H; ++y) {
 					dst_offset = (y_offs + y) * GAME_SCREEN_W + GAME_SCREEN_W - pitch,
 					src_offset = y * MAP_W + window_w;

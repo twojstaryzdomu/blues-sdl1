@@ -82,6 +82,7 @@ struct object_t {
 		struct thing_t t; /* objects[23..74] */
 	} data;
 	uint8_t hit_counter;
+	bool centred;
 };
 
 #define SPRITES_OFFSET 53
@@ -408,7 +409,7 @@ extern void	video_load_front_tiles();
 extern void	video_transition_close();
 extern void	video_transition_open();
 extern void	video_load_sprites();
-extern void	video_draw_sprite(int num, int x, int y, int flag);
+extern void	video_draw_sprite(int num, int x, int y, int flag, bool centred);
 extern void	video_put_pixel(int x, int y, uint8_t color);
 extern void	video_resize();
 

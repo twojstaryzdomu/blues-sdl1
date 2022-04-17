@@ -72,7 +72,7 @@ struct sys_t {
 	void	(*unlock_audio)();
 	void	(*render_load_sprites)(int spr_type, int count, const struct sys_rect_t *r, const uint8_t *data, int w, int h, uint8_t color_key, bool update_pal);
 	void	(*render_unload_sprites)(int spr_type);
-	void	(*render_add_sprite)(int spr_type, int frame, int x, int y, int xflip);
+	void	(*render_add_sprite)(int spr_type, int frame, int x, int y, int xflip, bool centred);
 	void	(*render_clear_sprites)();
 	void	(*render_set_sprites_clipping_rect)(int x, int y, int w, int h);
 	void	(*add_message)(char *m);
