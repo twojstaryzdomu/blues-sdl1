@@ -25,7 +25,7 @@ static void wait_input(int timeout) {
 	const uint32_t end = g_sys.get_timestamp() + timeout;
 	while (g_sys.get_timestamp() < end) {
 		g_sys.process_events();
-		if (g_sys.input.quit || g_sys.input.space) {
+		if (g_sys.input.quit || g_sys.input.space || g_sys.resize) {
 			break;
 		}
 		g_sys.sleep(2);
@@ -174,9 +174,9 @@ static void do_demo_screen() {
 			g_sys.set_screen_palette(joystick_palette_data, 0, 16, 6);
 			update_screen_img(g_res.background, 0);
 			g_sys.fade_in_palette();
-			free(data);
 			wait_input(10000);
 		} while (g_sys.resize);
+		free(data);
 	}
 }
 
@@ -187,10 +187,10 @@ static void do_castle_screen() {
 			video_resize();
 			g_sys.set_screen_palette(data, 0, 256, 6);
 			update_screen_img(data + 768, 1);
-			//g_sys.fade_in_palette();
-			free(data);
+			g_sys.fade_in_palette();
 			wait_input(10000);
 		} while (g_sys.resize);
+		free(data);
 	}
 }
 
@@ -254,26 +254,27 @@ static void do_menu() {
 	uint8_t *data = load_file("MENU.SQZ");
 	if (data) {
 		g_sys.set_screen_palette(data, 0, 256, 6);
-		update_screen_img(data + 768, 0);
-		g_sys.fade_in_palette();
-		memset(g_vars.input.keystate, 0, sizeof(g_vars.input.keystate));
-		while (!g_sys.input.quit) {
-			update_input();
-			if (g_vars.input.keystate[2] || g_vars.input.keystate[0x4F] || g_sys.input.space) {
-				g_sys.input.space = 0;
-				g_sys.fade_out_palette();
-				break;
+		do {
+			video_resize();
+			update_screen_img(data + 768, 0);
+			g_sys.fade_in_palette();
+			memset(g_vars.input.keystate, 0, sizeof(g_vars.input.keystate));
+			while (!g_sys.input.quit) {
+				wait_input(30);
+				if (g_vars.input.keystate[2] || g_vars.input.keystate[0x4F] || g_sys.input.space) {
+					g_sys.input.space = 0;
+					g_sys.fade_out_palette();
+					break;
+				}
+				if (g_vars.input.keystate[3] || g_vars.input.keystate[0x50]) {
+					g_sys.fade_out_palette();
+					break;
+				}
+				if (g_sys.resize) {
+					break;
+				}
 			}
-			if (g_vars.input.keystate[3] || g_vars.input.keystate[0x50]) {
-				g_sys.fade_out_palette();
-				break;
-			}
-			if (g_sys.resize) {
-				update_screen_img(data + 768, 0);
-				g_sys.update_screen(g_res.vga, 1);
-			}
-			g_sys.sleep(30);
-		}
+		} while (g_sys.resize);
 		free(data);
 	}
 }
@@ -302,9 +303,9 @@ void do_theend_screen() {
 			g_sys.set_screen_palette(data, 0, 256, 6);
 			update_screen_img(data + 768, 0);
 			g_sys.fade_in_palette();
-			free(data);
 			wait_input(10000);
 		} while (g_sys.resize);
+		free(data);
 	}
 	time_t now;
 	time(&now);
