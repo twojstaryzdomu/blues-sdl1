@@ -518,6 +518,15 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.add_message(_s);
 		}
 		break;
+	case SDLK_h:
+		if (keydown) {
+			_hybrid_color = !_hybrid_color;
+			g_sys.reset_palette = true;
+			g_sys.resize_screen();
+			sprintf(_s, "Hybrid colour %s", _hybrid_color ? "on" : "off");
+			g_sys.add_message(_s);
+		}
+		break;
 	case SDLK_o:
 		if (keydown) {
 			fprintf(stderr, "Restoring original window size %dx%d, fullscreen %d\n", _orig_w, _orig_h, _orig_fullscreen);

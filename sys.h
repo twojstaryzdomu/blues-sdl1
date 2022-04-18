@@ -80,6 +80,7 @@ struct sys_t {
 	bool	paused;
 	bool	audio;
 	bool	resize;
+	bool	reset_palette;
 	int	w, h;
 };
 

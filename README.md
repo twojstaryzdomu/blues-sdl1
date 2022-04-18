@@ -58,6 +58,7 @@ the window.
 |     Key     |               Function               |
 |:-----------:|:-------------------------------------|
 |      A      | Toggle audio                         |
+|      H      | Toggle Hybrid crack palette bug      |
 |      O      | Restore original screen size         |
 |      P      | Pause game                           |
 |      S      | Toggle screen size lock              |
