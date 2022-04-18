@@ -142,8 +142,8 @@ static void sdl2_fini() {
 static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscreen, bool hybrid_color) {
 	_caption = caption;
 	_fullscreen = fullscreen;
-	int screen_w = MAX(w, 320);
-	int screen_h = MAX(h, 200);
+	int screen_w = MAX(w, ORIG_W);
+	int screen_h = MAX(h, ORIG_H);
 	if (!_size_lock) {
 		g_sys.w = screen_w;
 		g_sys.h = screen_h;
@@ -478,7 +478,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 						_window_w = _fullscreen ? _fullscreen_w : _orig_w;
 						_window_h = _fullscreen ? _fullscreen_h : _orig_h;
 					#else
-						if (g_sys.w == 320 && g_sys.h == 200) {
+						if (g_sys.w == ORIG_W && g_sys.h == ORIG_H) {
 							_window_w = _fullscreen ? FULLSCREEN_W : _orig_w;
 							_window_h = _fullscreen ? FULLSCREEN_H : _orig_h;
 						}
