@@ -42,7 +42,7 @@ Compared to the original DOS executables, the rewritten engines feature:
 - horizontal scrolling
 - configurable screen size
 - dynamically resizable window to control game screen size
-- in-game screen controls for screen size
+- in-game screen controls for screen size & palette
 - on-screen messaging
 - game cheats: unlimited lifes and energy, no hit
 - game pad support with a user-defined jump button
@@ -55,7 +55,9 @@ in-game keys for display control.
 The screen size lock allows to hold a given game screen size whilst manipulating
 the window.
 
-|     Key     |               Function               |
+In-game palette cycling is only available in Prehistorik 2.
+
+|    Key(s)   |               Function               |
 |:-----------:|:-------------------------------------|
 |      A      | Toggle audio                         |
 |      H      | Toggle Hybrid crack palette bug      |
@@ -63,6 +65,8 @@ the window.
 |      P      | Pause game                           |
 |      S      | Toggle screen size lock              |
 | ALT + Enter | Toggle fullscreen <=> windowed mode  |
+|      -      | Cycle to previous palette            |
+|     + =     | Cycle to next palette                |
 
 ## Running
 

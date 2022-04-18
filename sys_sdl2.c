@@ -501,6 +501,21 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.input.quit = true;
 		}
 		break;
+	case SDLK_MINUS:
+		if (keydown) {
+			g_sys.palette_offset = -1;
+			g_sys.reset_palette = true;
+			g_sys.resize_screen();
+		}
+		break;
+	case SDLK_EQUALS:
+	case SDLK_PLUS:
+		if (keydown) {
+			g_sys.palette_offset = 1;
+			g_sys.reset_palette = true;
+			g_sys.resize_screen();
+		}
+		break;
 	case SDLK_1:
 		input->digit1 = keydown;
 		break;

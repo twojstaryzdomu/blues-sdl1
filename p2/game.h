@@ -31,6 +31,8 @@ extern struct options_t g_options;
 #define MAP_W 640
 #define MAP_H 200
 
+#define UNIQUE_PALETTES 15
+
 struct club_anim_t {
 	const uint8_t *anim; /* uint16_t[4] : player spr, club spr, x, y */
 	uint8_t a;
@@ -240,6 +242,8 @@ struct vars_t {
 
 	uint8_t columns_tiles_buf[256];
 
+	uint8_t palette;
+
 	struct {
 		int16_t x, y;
 		int16_t prev_x, prev_y;
@@ -325,12 +329,24 @@ struct vars_t {
 extern struct vars_t g_vars;
 
 /* staticres.c */
+extern const uint8_t palette_data_level_0[16 * 3];
+extern const uint8_t palette_data_level_1[16 * 3];
+extern const uint8_t palette_data_level_2[16 * 3];
+extern const uint8_t palette_data_level_3[16 * 3];
+extern const uint8_t palette_data_level_4[16 * 3];
+extern const uint8_t palette_data_level_5[16 * 3];
+extern const uint8_t palette_data_level_6_15[16 * 3];
+extern const uint8_t palette_data_level_7[16 * 3];
+extern const uint8_t palette_data_level_8_9_14[16 * 3];
+extern const uint8_t palette_data_level_10_11_12[16 * 3];
+extern const uint8_t palette_data_level_13[16 * 3];
 extern const uint8_t *palettes_tbl[16];
 extern const uint8_t credits_palette_data[16 * 3];
 extern const uint8_t light_palette_data[16 * 3];
 extern const uint8_t present_palette_data[256 * 3];
 extern const uint8_t menu_palette_data[16 * 3];
 extern const uint8_t joystick_palette_data[16 * 3];
+extern const uint8_t *unique_palettes_tbl[UNIQUE_PALETTES];
 extern const uint8_t spr_offs_tbl[922];
 extern const uint8_t spr_size_tbl[922];
 extern const uint16_t score_tbl[17];
