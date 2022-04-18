@@ -510,6 +510,14 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_3:
 		input->digit3 = keydown;
 		break;
+	case SDLK_a:
+		if (keydown) {
+			g_sys.audio = !g_sys.audio;
+			SDL_PauseAudio(!g_sys.audio);
+			sprintf(_s, "Sound %s", g_sys.audio ? "on" : "off");
+			g_sys.add_message(_s);
+		}
+		break;
 	case SDLK_o:
 		if (keydown) {
 			fprintf(stderr, "Restoring original window size %dx%d, fullscreen %d\n", _orig_w, _orig_h, _orig_fullscreen);

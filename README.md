@@ -57,6 +57,7 @@ the window.
 
 |     Key     |               Function               |
 |:-----------:|:-------------------------------------|
+|      A      | Toggle audio                         |
 |      O      | Restore original screen size         |
 |      P      | Pause game                           |
 |      S      | Toggle screen size lock              |
