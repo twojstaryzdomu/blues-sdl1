@@ -3324,8 +3324,7 @@ static void level_draw_messages() {
 	}
 }
 
-static void level_sync() {
-	update_input();
+static void level_resize() {
 	if (g_sys.resize) {
 		video_resize();
 		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
@@ -3334,9 +3333,18 @@ static void level_sync() {
 		g_sys.add_message(g_vars.message.s);
 		level_draw_messages();
 	}
+}
+
+static void level_update_palette() {
 	if (g_sys.reset_palette) {
 		set_level_palette();
 	}
+}
+
+static void level_sync() {
+	update_input();
+	level_resize();
+	level_update_palette();
 	g_sys.update_screen(g_res.vga, 1);
 	g_sys.render_clear_sprites();
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
