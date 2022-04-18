@@ -292,6 +292,41 @@ static void sdl2_set_palette_color(int i, const uint8_t *colors) {
 	_screen_palette[i] = SDL_MapRGB(_fmt, r, g, b);
 }
 
+static void sdl2_update_sprites_screen() {
+	SDL_SetClipRect(_renderer, &_sprites_cliprect);
+	for (int i = 0; i < _sprites_count; ++i) {
+		const struct sprite_t *spr = &_sprites[i];
+		struct spritesheet_t *sheet = &_spritesheets[spr->sheet];
+		if (spr->num >= sheet->count) {
+			continue;
+		}
+		SDL_Rect r;
+		r.x = spr->x + _shake_dx;
+		r.y = spr->y + _shake_dy;
+		r.w = sheet->r[spr->num].w;
+		r.h = sheet->r[spr->num].h;
+		SDL_Rect t;
+		t.x = sheet->r[spr->num].x;
+		t.w = sheet->r[spr->num].w;
+		t.h = sheet->r[spr->num].h;
+		t.y = sheet->r[spr->num].y;
+		if (spr->xflip) {
+			if (_flipped_cache[spr->sheet][spr->num]) {
+				print_debug(DBG_SYSTEM, "Cache hit for sprite %d from sheet %d", spr->num, spr->sheet);
+			} else {
+				if (t.w && t.h) { // only sprites with w & h
+					print_debug(DBG_SYSTEM, "Rendering sprite %d from sheet %d", spr->num, spr->sheet);
+					_flipped_cache[spr->sheet][spr->num] = CopyRectFlipped(sheet->texture, &t);
+				}
+			}
+			SDL_BlitSurface(_flipped_cache[spr->sheet][spr->num], 0, _renderer, &r);
+		} else {
+			SDL_BlitSurface(sheet->texture, &t, _renderer, &r);
+		}
+	}
+	SDL_SetClipRect(_renderer, 0);
+}
+
 static void fade_palette_helper(int in) {
 	int component = 0;
 	SDL_Surface* surface = SDL_CreateRGBSurface(0, g_sys.w, g_sys.h, 32, rmask, gmask, bmask, amask);
@@ -303,10 +338,12 @@ static void fade_palette_helper(int in) {
 		Uint32 color = SDL_MapRGBA(surface->format, component, component, component, alpha);
 		SDL_FillRect(surface, 0, color);
 		SDL_BlitSurface(_texture, 0, _renderer, 0);
+		sdl2_update_sprites_screen();
 		SDL_BlitSurface(surface, 0, _renderer, 0);
 		SDL_Flip(_renderer);
 		SDL_Delay(30);
 	}
+	g_sys.render_clear_sprites();
 	SDL_FreeSurface(surface);
 }
 
@@ -391,41 +428,7 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 		SDL_Rect r={_shake_dx, _shake_dy, g_sys.w, g_sys.h};
 		SDL_FillRect(_renderer, &r, -1);
 		SDL_BlitSurface(_texture, &r, _renderer, 0);
-
-		// sprites
-		SDL_SetClipRect(_renderer, &_sprites_cliprect);
-		for (int i = 0; i < _sprites_count; ++i) {
-			const struct sprite_t *spr = &_sprites[i];
-			struct spritesheet_t *sheet = &_spritesheets[spr->sheet];
-			if (spr->num >= sheet->count) {
-				continue;
-			}
-			SDL_Rect r;
-			r.x = spr->x + _shake_dx;
-			r.y = spr->y + _shake_dy;
-			r.w = sheet->r[spr->num].w;
-			r.h = sheet->r[spr->num].h;
-			SDL_Rect t;
-			t.x = sheet->r[spr->num].x;
-			t.w = sheet->r[spr->num].w;
-			t.h = sheet->r[spr->num].h;
-			t.y = sheet->r[spr->num].y;
-			if (spr->xflip) {
-				if (_flipped_cache[spr->sheet][spr->num]) {
-					print_debug(DBG_SYSTEM, "Cache hit for sprite %d from sheet %d", spr->num, spr->sheet);
-				} else {
-					if (t.w && t.h) { // only sprites with w & h
-						print_debug(DBG_SYSTEM, "Rendering sprite %d from sheet %d", spr->num, spr->sheet);
-						_flipped_cache[spr->sheet][spr->num] = CopyRectFlipped(sheet->texture, &t);
-					}
-				}
-				SDL_BlitSurface(_flipped_cache[spr->sheet][spr->num], 0, _renderer, &r);
-			} else {
-				SDL_BlitSurface(sheet->texture, &t, _renderer, &r);
-			}
-		}
-		SDL_SetClipRect(_renderer, 0);
-
+		sdl2_update_sprites_screen();
 		SDL_Flip(_renderer);
 	}
 }
