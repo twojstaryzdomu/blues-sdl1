@@ -94,7 +94,7 @@ void video_draw_number(int offset, int num) {
 void video_draw_character_spr(int offset, uint8_t chr) {
 	const int y = (offset * 8) / 320;
 	const int x = (offset * 8) % 320;
-	video_draw_sprite(CHARACTER_OFFSET + chr, x, y, 0);
+	video_draw_sprite(CHARACTER_OFFSET + chr, x, y, 0, false);
 }
 
 void video_draw_string2(int offset, const char *s) {
@@ -123,7 +123,7 @@ void video_draw_centred_string(const char *s, bool clip) {
 		if (chr != ' ') {
 			uint8_t offset = chr > digits_ascii ? uppercase_offset : number_offset;
 			offset += chr > lowercase_offset + uppercase_offset - 1 ? lowercase_offset : 0;
-			video_draw_sprite(CHARACTER_OFFSET + chr - offset, x, y, 0);
+			video_draw_sprite(CHARACTER_OFFSET + chr - offset, x, y, 0, false);
 		}
 		x += STRING_SPR_W;
 	}
@@ -329,8 +329,8 @@ void video_load_sprites() {
 	}
 }
 
-void video_draw_sprite(int num, int x, int y, int flag) {
-	g_sys.render_add_sprite(RENDER_SPR_GAME, num, x, y, flag != 0);
+void video_draw_sprite(int num, int x, int y, int flag, bool centred) {
+	g_sys.render_add_sprite(RENDER_SPR_GAME, num, x, y, flag != 0, centred);
 }
 
 void video_put_pixel(int x, int y, uint8_t color) {

@@ -3102,7 +3102,7 @@ static void level_update_columns() {
 static void level_draw_front_tile(uint8_t tile_num, int x, int y) {
 	const int num = g_res.level.front_tiles_lut[tile_num];
 	assert(num < (g_res.frontlen / 128));
-	g_sys.render_add_sprite(RENDER_SPR_FG, num, x * 16 - g_vars.tilemap.scroll_dx, y * 16 - g_vars.tilemap.scroll_dy, 0);
+	g_sys.render_add_sprite(RENDER_SPR_FG, num, x * 16 - g_vars.tilemap.scroll_dx, y * 16 - g_vars.tilemap.scroll_dy, 0, false);
 }
 
 static void level_draw_front_tiles() {
@@ -3382,7 +3382,7 @@ static void level_draw_objects() {
 		if (spr_x_pos > TILEMAP_SCREEN_W || spr_x_pos + spr_w < 0) {
 			continue;
 		}
-		video_draw_sprite(spr_num, spr_x_pos, spr_y_pos, spr_hflip);
+		video_draw_sprite(spr_num, spr_x_pos, spr_y_pos, spr_hflip, obj->centred);
 		obj->spr_num |= 0x2000;
 		obj->spr_num &= ~0x4000;
 	}

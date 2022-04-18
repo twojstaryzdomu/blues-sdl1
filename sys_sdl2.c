@@ -25,6 +25,7 @@ struct sprite_t {
 	int num;
 	int x, y;
 	bool xflip;
+	bool centred;
 };
 
 static struct sprite_t _sprites[MAX_SPRITES];
@@ -36,6 +37,7 @@ static int _window_w, _window_h;
 static int _fullscreen_w, _fullscreen_h;
 #endif
 static int _shake_dx, _shake_dy;
+static int _centred_x_offset, _centred_y_offset;
 static uint32_t flags, rmask, gmask, bmask, amask;
 static SDL_Surface *_renderer;
 static SDL_Surface *_texture;
@@ -148,6 +150,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 		g_sys.w = screen_w;
 		g_sys.h = screen_h;
 	}
+	_centred_x_offset = (g_sys.w - ORIG_W) / 2;
+	_centred_y_offset = (g_sys.h - ORIG_H) / 2;
 	if (!_orig_w) {
 		_orig_w = screen_w;
 		_orig_h = screen_h;
@@ -305,6 +309,10 @@ static void sdl2_update_sprites_screen() {
 		r.y = spr->y + _shake_dy;
 		r.w = sheet->r[spr->num].w;
 		r.h = sheet->r[spr->num].h;
+		if (spr->centred) {
+			r.x += _centred_x_offset;
+			r.y += _centred_y_offset;
+		}
 		SDL_Rect t;
 		t.x = sheet->r[spr->num].x;
 		t.w = sheet->r[spr->num].w;
@@ -786,7 +794,7 @@ static void render_unload_sprites(int spr_type) {
 	memset(sheet, 0, sizeof(struct spritesheet_t));
 }
 
-static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip) {
+static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip, bool centred) {
 	assert(_sprites_count < MAX_SPRITES);
 	struct sprite_t *spr = &_sprites[_sprites_count];
 	spr->sheet = spr_type;
@@ -794,6 +802,7 @@ static void render_add_sprite(int spr_type, int frame, int x, int y, int xflip) 
 	spr->x = x;
 	spr->y = y;
 	spr->xflip = xflip;
+	spr->centred = centred;
 	++_sprites_count;
 }
 
