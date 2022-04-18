@@ -56,6 +56,8 @@ static bool _size_lock;
 static bool _orig_fullscreen;
 static bool _orig_color;
 
+static char _s[MESSAGE_MAX];
+
 static SDL_Joystick *_joystick;
 
 #if defined(HAVE_X11)
@@ -526,7 +528,8 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_s:
 		if (keydown) {
 			_size_lock = !_size_lock;
-			fprintf(stderr, "Screen size is %s\n", _size_lock ? "locked" : "unlocked");
+			sprintf(_s, "Size %s", _size_lock ? "locked" : "unlocked");
+			g_sys.add_message(_s);
 		}
 		break;
 	default:
@@ -770,6 +773,40 @@ static void render_set_sprites_clipping_rect(int x, int y, int w, int h) {
 	_sprites_cliprect.h = h;
 }
 
+static void add_message(char *m) {
+	int j;
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (g_sys.message_queue[i] && strcmp(m, g_sys.message_queue[i]) == 0)
+			return;
+	}
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (!g_sys.message_queue[i])
+			j = i;
+	}
+	g_sys.message_queue[ 0 + j ] = m;
+}
+
+static char* get_message() {
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (g_sys.message_queue[i])
+			return g_sys.message_queue[i];
+	}
+	return 0;
+}
+
+static void clear_message(const char *m) {
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		if (g_sys.message_queue[i] && strcmp(m, g_sys.message_queue[i]) == 0)
+			g_sys.message_queue[i] = 0;
+	}
+}
+
+static void clear_messages() {
+	for (int i = 0; i < MAX_MESSAGES; i++) {
+		g_sys.message_queue[i] = 0;
+	}
+}
+
 struct sys_t g_sys = {
 	.init = sdl2_init,
 	.fini = sdl2_fini,
@@ -795,5 +832,9 @@ struct sys_t g_sys = {
 	.render_unload_sprites = render_unload_sprites,
 	.render_add_sprite = render_add_sprite,
 	.render_clear_sprites = render_clear_sprites,
-	.render_set_sprites_clipping_rect = render_set_sprites_clipping_rect
+	.render_set_sprites_clipping_rect = render_set_sprites_clipping_rect,
+	.add_message = add_message,
+	.get_message = get_message,
+	.clear_message = clear_message,
+	.clear_messages = clear_messages
 };

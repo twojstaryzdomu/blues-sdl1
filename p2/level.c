@@ -640,6 +640,8 @@ void level_player_die() {
 	if (g_vars.player_lifes != 0) {
 		if ((g_options.cheats & CHEATS_UNLIMITED_LIFES) == 0) {
 			--g_vars.player_lifes;
+			g_sys.add_message("Killed by death");
+			g_vars.message.timelimit = 500;
 			g_vars.player_energy = 0;
 		}
 	} else {
@@ -3283,14 +3285,34 @@ static void level_update_light_palette() {
 	}
 }
 
+static void level_draw_messages() {
+	if (g_vars.message.timestamp) {
+		if (g_sys.get_timestamp() - g_vars.message.timestamp > (g_vars.message.timelimit ? g_vars.message.timelimit : MESSAGE_TIMELIMIT)) {
+			g_sys.clear_message(g_vars.message.s);
+			memset(g_vars.message.s, 0, MESSAGE_MAX);
+			g_vars.message.timelimit = 0;
+			g_vars.message.timestamp = 0;
+		}
+	} else {
+		if (g_sys.get_message()) {
+			strncpy(g_vars.message.s, g_sys.get_message(), MESSAGE_MAX);
+			g_vars.message.timestamp = g_sys.get_timestamp();
+		}
+	}
+	if (g_vars.message.s) {
+		video_draw_centred_string(g_vars.message.s, 0);
+	}
+}
+
 static void level_sync() {
 	update_input();
 	if (g_sys.resize) {
 		video_resize();
 		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
-		g_sys.resize = true;
 		level_init_tilemap();
-		g_sys.resize = false;
+		sprintf(g_vars.message.s, "%dx%d", GAME_SCREEN_W, GAME_SCREEN_H);
+		g_sys.add_message(g_vars.message.s);
+		level_draw_messages();
 	}
 	g_sys.update_screen(g_res.vga, 1);
 	g_sys.render_clear_sprites();
@@ -3831,7 +3853,7 @@ static void level_pause() {
 	video_transition_close();
 	video_clear();
 	level_draw_panel();
-	video_draw_centred_string("PAUSED");
+	video_draw_centred_string("PAUSED", 1);
 	g_sys.update_screen(g_res.vga, 1);
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
 	while (g_sys.paused) {
@@ -3848,6 +3870,7 @@ static void level_pause() {
 void do_level() {
 	static const uint8_t music_tbl[] = { 9, 9, 0, 0, 0, 13, 4, 4, 10, 13, 16, 16, 16, 9, 14, 4 };
 	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+	g_sys.clear_messages();
 	play_music(music_tbl[g_vars.level_num]);
 	load_level_data(g_vars.level_num);
 	set_level_palette();
@@ -3892,6 +3915,7 @@ void do_level() {
 		}
 		level_update_panel();
 		level_pause();
+		level_draw_messages();
 		level_sync();
 		level_update_light_palette();
 		level_update_player_bonuses();

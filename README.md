@@ -43,6 +43,7 @@ Compared to the original DOS executables, the rewritten engines feature:
 - configurable screen size
 - dynamically resizable window to control game screen size
 - in-game screen controls for screen size
+- on-screen messaging
 - game cheats: unlimited lifes and energy, no hit
 - game pad support with a user-defined jump button
 
