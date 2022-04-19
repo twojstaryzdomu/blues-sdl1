@@ -61,6 +61,7 @@ In-game palette cycling is only available in Prehistorik 2.
 |:-----------:|:-------------------------------------|
 |      A      | Toggle audio                         |
 |      H      | Toggle Hybrid crack palette bug      |
+|      J      | Configure jump button                |
 |      O      | Restore original screen size         |
 |      P      | Pause game                           |
 |      S      | Toggle screen size lock              |

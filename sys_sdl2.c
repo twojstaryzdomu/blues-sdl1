@@ -74,6 +74,7 @@ static bool _orig_color;
 static char _s[MESSAGE_MAX];
 
 static SDL_Joystick *_joystick;
+static bool _joystick_up_setup;
 
 #if defined(HAVE_X11)
 #include <X11/Xlib.h>
@@ -93,6 +94,7 @@ static void x11_set_fullscreen_size(int *w, int *h) {
 	XRRFreeScreenResources(screens);
 }
 #endif
+
 
 static int sdl2_init() {
 	print_debug(DBG_SYSTEM, "Byte order is %s endian", SDL_BYTEORDER == SDL_BIG_ENDIAN ? "big" : "little");
@@ -665,6 +667,13 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.add_message(_s);
 		}
 		break;
+	case SDLK_j:
+		if (keydown) {
+			sprintf(_s, "Press jump button");
+			g_sys.add_message(_s);
+			_joystick_up_setup = true;
+		}
+		break;
 	case SDLK_o:
 		if (keydown) {
 			fprintf(stderr, "Restoring original window size %dx%d, fullscreen %d\n", _orig_w, _orig_h, _orig_fullscreen);
@@ -732,6 +741,15 @@ static void handle_joystickaxismotion(int axis, int value, struct input_t *input
 }
 
 static void handle_joystickbutton(int button, int pressed, struct input_t *input) {
+	if (_joystick_up_setup) {
+		if (pressed) {
+			g_sys.input.jump_button = button;
+			_joystick_up_setup = false;
+			sprintf(_s, "Jump on %d key", g_sys.input.jump_button);
+			g_sys.add_message(_s);
+			return;
+		}
+	}
 	if (button == g_sys.input.jump_button) {
 		if (pressed) {
 			input->direction |= INPUT_DIRECTION_UP;
