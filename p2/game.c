@@ -259,6 +259,9 @@ void do_gameover_screen() {
 		video_copy_centred(g_res.background, 320, 200);
 		g_sys.set_screen_palette(gameover_palette_data, 0, 16, 6);
 		do_gameover_animation();
+		video_clear();
+		video_copy_centred(g_res.background, 320, 200);
+		g_sys.update_screen(g_res.vga, 0);
 		g_sys.fade_out_palette();
 		free(data);
 	}
@@ -281,11 +284,13 @@ static void do_menu2() {
 }
 
 static bool do_menu() {
+	bool rc = false;
 	uint8_t *data = load_file("MENU.SQZ");
 	if (data) {
 		g_sys.set_screen_palette(data, 0, 256, 6);
 		do {
 			video_resize();
+			g_sys.centred = true;
 			update_screen_img(data + 768, 0);
 			g_sys.fade_in_palette();
 			memset(g_vars.input.keystate, 0, sizeof(g_vars.input.keystate));
@@ -306,13 +311,15 @@ static bool do_menu() {
 				}
 				if (!g_res.dos_demo && g_sys.get_timestamp() - start >= 15 * 1000) {
 					g_sys.fade_out_palette();
-					return true;
+					rc = true;
+					break;
 				}
 			}
 		} while (g_sys.resize);
 		free(data);
+		g_sys.centred = false;
 	}
-	return false;
+	return rc;
 }
 
 static void do_photos_screen() {

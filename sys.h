@@ -48,6 +48,10 @@ enum sys_transition_e {
 	TRANSITION_CURTAIN
 };
 
+enum sys_slide_e {
+	SLIDE_BOTTOM = 1
+};
+
 struct sys_t {
 	struct input_t	input;
 	int	(*init)();
@@ -79,6 +83,10 @@ struct sys_t {
 	char*	(*get_message)();
 	void	(*clear_message)(const char *m);
 	void	(*clear_messages)();
+	void	(*clear_slide)();
+	struct	sys_rect_t slide_rect;
+	enum	sys_slide_e slide_type;
+	uint16_t	slide_end;
 	char	*message_queue[MAX_MESSAGES];
 	bool	paused;
 	bool	audio;

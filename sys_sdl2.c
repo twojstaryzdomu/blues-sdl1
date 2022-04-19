@@ -32,6 +32,19 @@ static struct sprite_t _sprites[MAX_SPRITES];
 static int _sprites_count;
 static SDL_Rect _sprites_cliprect;
 
+struct slide_t {
+	SDL_Rect *b;
+	SDL_Rect *br;
+	SDL_Rect *c;
+	SDL_Rect *f;
+	int16_t *pos;
+	int end;
+	int last_pos;
+	int step;
+};
+
+static struct slide_t _slide;
+
 static int _window_w, _window_h;
 #if defined(HAVE_X11)
 static int _fullscreen_w, _fullscreen_h;
@@ -298,7 +311,7 @@ static void sdl2_set_palette_color(int i, const uint8_t *colors) {
 
 static void sdl2_update_sprites_screen() {
 	if (!g_sys.centred) {
-		SDL_SetClipRect(_renderer, &_sprites_cliprect);
+		SDL_SetClipRect(_renderer, !_slide.c? &_sprites_cliprect : _slide.c);
 	} else {
 		SDL_Rect c = { .x = _centred_x_offset, .y = _centred_y_offset, .w = ORIG_W, .h = ORIG_H };
 		SDL_SetClipRect(_renderer, &c);
@@ -314,6 +327,10 @@ static void sdl2_update_sprites_screen() {
 		r.y = spr->y + _shake_dy;
 		r.w = sheet->r[spr->num].w;
 		r.h = sheet->r[spr->num].h;
+		if (_slide.br) {
+			r.x += _slide.br->x - _centred_x_offset;
+			r.y += _slide.br->y - _centred_y_offset;
+		}
 		if (spr->centred) {
 			r.x += _centred_x_offset;
 			r.y += _centred_y_offset;
@@ -352,6 +369,9 @@ static void fade_palette_helper(int in) {
 		SDL_FillRect(surface, 0, color);
 		SDL_BlitSurface(_texture, 0, _renderer, 0);
 		sdl2_update_sprites_screen();
+		if (_slide.f) {
+			SDL_BlitSurface(_texture, _slide.f, _renderer, _slide.f);
+		}
 		SDL_BlitSurface(surface, 0, _renderer, 0);
 		SDL_Flip(_renderer);
 		SDL_Delay(30);
@@ -411,8 +431,81 @@ static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transiti
 	} while (((r.x > r.x % step_w && open) || (r.y < s->h / 2 && !open)) && (type == TRANSITION_CURTAIN || r.y > r.y % step_h));
 }
 
+static SDL_Rect *set_rect(int x, int y, int w, int h){
+	SDL_Rect *r = malloc(sizeof(SDL_Rect));
+	r->x = x;
+	r->y = y;
+	r->w = w;
+	r->h = h;
+	return r;
+}
+
+static void init_slide(){
+	if (!_slide.br) {
+		enum sys_slide_e type	= g_sys.slide_type;
+		struct sys_rect_t *s	= &g_sys.slide_rect;
+		SDL_Rect *f		= set_rect(0, s->y ? s->y : g_sys.h - s->h, g_sys.w, s->h);
+		SDL_Rect *b		= set_rect(0, 0, ORIG_W, ORIG_H);
+		SDL_Rect *br		= set_rect(b->x, b->y, b->w, b->h);
+		switch (type) {
+		case SLIDE_BOTTOM:
+			br->y		= g_sys.h;
+			_slide.end	= g_sys.slide_end
+					? g_sys.slide_end
+					: b->y > _centred_y_offset
+					? f->y + f->h
+					: _centred_y_offset;
+			_slide.pos	= &(br->y);
+			*_slide.pos	= MAX(0, *_slide.pos - _slide.last_pos);
+			_slide.step	= -1;
+			if (!g_sys.centred) {
+				br->x	+= _centred_x_offset;
+			}
+		}
+		SDL_Rect *c		= set_rect(_centred_x_offset, 0, ORIG_W, f->y);
+		_slide.b		= b;
+		_slide.br		= br;
+		_slide.c		= c;
+		_slide.f		= f;
+	}
+}
+
+static void clear_slide(){
+	g_sys.slide_type = 0;
+	free(_slide.b);
+	free(_slide.br);
+	free(_slide.c);
+	free(_slide.f);
+	_slide.b = 0;
+	_slide.br = 0;
+	_slide.c = 0;
+	_slide.f = 0;
+	_slide.last_pos = 0;
+}
+
+static void update_slide() {
+	if (g_sys.slide_type) {
+		if (*_slide.pos != _slide.end) {
+			*_slide.pos += _slide.step;
+			++_slide.last_pos;
+		}
+	}
+}
+
+static void reinit_slide() {
+	if (g_sys.slide_type) {
+		uint8_t slide_type = g_sys.slide_type;
+		uint8_t last_pos = _slide.last_pos;
+		clear_slide();
+		g_sys.slide_type = slide_type;
+		_slide.last_pos = last_pos;
+		init_slide();
+	}
+}
+
 static void sdl2_resize_screen() {
 	sdl2_set_screen_size(_window_w, _window_h, _caption, _fullscreen, _hybrid_color);
+	reinit_slide();
 }
 
 static void sdl2_update_screen(const uint8_t *p, int present) {
@@ -438,11 +531,25 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 	SDL_FreeSurface(_texture);
 	_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w, g_sys.h, 32, g_sys.w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
 	if (present) {
+		SDL_Rect *src, *dst;
 		SDL_Rect r={_shake_dx, _shake_dy, g_sys.w, g_sys.h};
+		if (g_sys.slide_type) {
+			init_slide();
+			src = _slide.b;
+			dst = _slide.br;
+			SDL_SetClipRect(_renderer, _slide.c);
+		} else {
+			src = 0;
+			dst = &r;
+		}
 		SDL_FillRect(_renderer, &r, -1);
-		SDL_BlitSurface(_texture, &r, _renderer, 0);
+		SDL_BlitSurface(_texture, src, _renderer, dst);
 		sdl2_update_sprites_screen();
+		if (_slide.f)
+			SDL_BlitSurface(_texture, _slide.f, _renderer, _slide.f);
 		SDL_Flip(_renderer);
+		if (_slide.br)
+			update_slide();
 	}
 }
 
@@ -564,6 +671,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.resize = true;
 			_size_lock = false;
 			sdl2_set_screen_size(_orig_w, _orig_h, _caption, _orig_fullscreen, _orig_color);
+			reinit_slide();
 		}
 		break;
 	case SDLK_p:
@@ -866,6 +974,7 @@ struct sys_t g_sys = {
 	.set_palette_color = sdl2_set_palette_color,
 	.fade_in_palette = sdl2_fade_in_palette,
 	.fade_out_palette = sdl2_fade_out_palette,
+	.clear_slide = clear_slide,
 	.resize_screen = sdl2_resize_screen,
 	.update_screen = sdl2_update_screen,
 	.shake_screen = sdl2_shake_screen,

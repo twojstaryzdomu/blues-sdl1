@@ -3317,11 +3317,13 @@ static void level_draw_messages() {
 static void level_resize() {
 	if (g_sys.resize) {
 		video_resize();
-		if (!g_sys.centred) {
+		if (!g_sys.centred && !g_vars.slide) {
 			g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 			level_init_tilemap();
-		} else {
+		} else if (g_sys.centred) {
 			video_copy_centred(g_res.background, 320, 200);
+		} else {
+			video_copy_background();
 		}
 		sprintf(g_vars.message.s, "%dx%d", GAME_SCREEN_W, GAME_SCREEN_H);
 		g_sys.add_message(g_vars.message.s);
@@ -3340,7 +3342,7 @@ static void level_sync() {
 	level_resize();
 	level_update_palette();
 	g_sys.update_screen(g_res.vga, 1);
-	if (!g_sys.centred)
+	if (!g_sys.centred && !g_vars.slide)
 		g_sys.render_clear_sprites();
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
 	g_sys.sleep(MAX(diff, 10));
@@ -3915,9 +3917,7 @@ static void level_pause() {
 	print_debug(DBG_SYSTEM, "Resuming");
 }
 
-static const int GAMEOVER_Y_OFFSET = 200;
-
-static void do_gameover_animation_helper(const char *gameover) {
+static void do_gameover_animation_helper(const char *gameover, uint8_t gameover_y_offset) {
 	if ((g_vars.level_draw_counter & 3) == 0) {
 		int spr_num = (g_vars.objects_tbl[MONSTERS_OFFSET + 10].spr_num & 0x1FFF) + 1;
 		if (spr_num >= 110) {
@@ -3940,7 +3940,7 @@ static void do_gameover_animation_helper(const char *gameover) {
 		const int rx = (((int8_t)cos_tbl[obj->x_friction]) * 65) >> 6;
 		obj->x_pos = rx + 150;
 		const int ry = (((int8_t)sin_tbl[obj->x_friction]) * 10) >> 6;
-		obj->y_pos = ry + 309 - GAMEOVER_Y_OFFSET;
+		obj->y_pos = ry + 309 - gameover_y_offset;
 		obj->data.m.x_velocity = ry;
 		obj->x_friction += 2;
 		update_object_demo_animation(obj);
@@ -3955,7 +3955,7 @@ static void do_gameover_animation_helper(const char *gameover) {
 	for (int i = 0; i < 2; ++i) {
 		struct object_t *di = &g_vars.objects_tbl[MONSTERS_OFFSET + i];
 		struct object_t *si = &g_vars.objects_tbl[BONUSES_OFFSET + 8 + i];
-		if (si->y_pos >= 309 - GAMEOVER_Y_OFFSET) {
+		if (si->y_pos >= 309 - gameover_y_offset) {
 			*di = *si;
 			si->spr_num = 0xFFFF;
 		}
@@ -3971,12 +3971,13 @@ void do_gameover_animation() {
 	g_vars.tilemap.x = g_vars.tilemap.scroll_dx = 0;
 	g_vars.tilemap.y = g_vars.tilemap.scroll_dy = 0;
 	static const char *gameover = "GAMEOVER";
+	const uint8_t gameover_y_offset = 200;
 	int x_pos = 44;
 	for (int i = 0; i < strlen(gameover); ++i) {
 		struct object_t *obj = &g_vars.objects_tbl[PLAYER_OFFSET + i];
 		obj->spr_num = 0xB0 + gameover[i];
 		obj->x_pos = x_pos;
-		obj->y_pos = 224 - GAMEOVER_Y_OFFSET;
+		obj->y_pos = 224 - gameover_y_offset;
 		obj->centred = true;
 		obj->data.m.y_velocity = random_get_number() & 7;
 		if (obj->data.m.y_velocity == 0) {
@@ -3994,16 +3995,16 @@ void do_gameover_animation() {
 		g_vars.objects_tbl[BONUSES_OFFSET + 8 + i].centred = true;
 	}
 	g_vars.objects_tbl[MONSTERS_OFFSET + 8].x_pos = 150;
-	g_vars.objects_tbl[MONSTERS_OFFSET + 8].y_pos = 309 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 8].y_pos = 309 - gameover_y_offset;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 8].spr_num = 0x64;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 9].x_pos = 151;
-	g_vars.objects_tbl[MONSTERS_OFFSET + 9].y_pos = 264 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 9].y_pos = 264 - gameover_y_offset;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 9].spr_num = 0x1C4;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 10].x_pos = 150;
-	g_vars.objects_tbl[MONSTERS_OFFSET + 10].y_pos = 289 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 10].y_pos = 289 - gameover_y_offset;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 10].spr_num = 0x68;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 11].x_pos = 150;
-	g_vars.objects_tbl[MONSTERS_OFFSET + 11].y_pos = 281 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 11].y_pos = 281 - gameover_y_offset;
 	g_vars.objects_tbl[MONSTERS_OFFSET + 11].spr_num = 0x62;
 	g_vars.objects_tbl[BONUSES_OFFSET + 8].x_friction = 0;
 	g_vars.objects_tbl[BONUSES_OFFSET + 8].data.m.anim = gameover_anim1_data;
@@ -4012,18 +4013,30 @@ void do_gameover_animation() {
 	g_vars.objects_tbl[BONUSES_OFFSET + 10].x_friction = 170;
 	g_vars.objects_tbl[BONUSES_OFFSET + 10].data.m.anim = gameover_anim3_data;
 	int timer_counter = 0;
-	g_sys.centred = true;
+	g_sys.slide_type = SLIDE_BOTTOM;
+	g_sys.slide_rect.h = PANEL_H;
+	g_sys.slide_end = 0;
+	g_vars.slide = true;
 	do {
 		g_sys.render_clear_sprites();
-		do_gameover_animation_helper(gameover);
+		do_gameover_animation_helper(gameover, gameover_y_offset);
 		level_draw_objects();
+		level_draw_messages();
 		level_update_panel();
 		level_sync();
+		while (g_sys.paused) {
+			update_input();
+			g_sys.sleep(100);
+		}
+		if (g_sys.input.space) {
+			break;
+		}
 		if (g_sys.input.quit) {
 			return;
 		}
 	} while (timer_counter < 630 && !g_sys.input.space);
-	g_sys.centred = false;
+	g_sys.clear_slide();
+	g_vars.slide = false;
 }
 
 void do_level() {
