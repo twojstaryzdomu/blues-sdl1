@@ -333,16 +333,7 @@ static void level_update_tilemap() {
 			return;
 		}
 	}
-	if (GAME_SCREEN_W * GAME_SCREEN_H == 64000) {
-		memcpy(g_res.vga, g_res.background, 320 * 200);
-	} else {
-		video_clear();
-		for (int y = 0; y < MIN(200, GAME_SCREEN_H); ++y) {
-			for (int x = 0; x < GAME_SCREEN_W; x += 320) {
-				memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * 320, MIN(320, GAME_SCREEN_W - x));
-			}
-		}
-	}
+	video_copy_background();
 	g_vars.tile_attr2_flags = 0;
 	uint16_t offset = (g_vars.tilemap.y << 8) | g_vars.tilemap.x;
 	for (int y = 0; y < ((TILEMAP_SCREEN_H + 15) & ~15) / 16 + 1; ++y) {
@@ -397,7 +388,7 @@ static bool level_adjust_hscroll_left() {
 
 static uint16_t tilemap_end_xpos() {
 	int end_x;
-	if (g_vars.objects_tbl[1].x_pos >> 4 > TILEMAP_SCREEN_W / 16) {
+	if (g_vars.objects_tbl[PLAYER_OFFSET].x_pos >> 4 > TILEMAP_SCREEN_W / 16) {
 		int level_w = g_vars.level_num != 1 ? 256 : 128;
 		end_x = level_w - (TILEMAP_SCREEN_W / 16);
 	} else {
@@ -577,11 +568,7 @@ static void level_adjust_y_scroll() {
 				if (index >= 0 && index < 132) {
 					dl = vscroll_offsets_data[index];
 				} else {
-					if (GAME_SCREEN_H > 200) {
-						print_debug(DBG_GAME, "Invalid scroll down delta %d", index);
-					} else {
-						print_warning("Invalid scroll down delta %d", index);
-					}
+					print_debug(DBG_GAME, "Invalid scroll down delta %d", index);
 					return;
 				}
 			}
@@ -598,7 +585,7 @@ static void level_adjust_y_scroll() {
 		if (index >= 0 && index < 132) {
 			dl = vscroll_offsets_data[index];
 		} else {
-			print_warning("Invalid scroll up delta %d", index);
+			print_debug(DBG_GAME, "Invalid scroll up delta %d", index);
 			return;
 		}
 	}
@@ -1015,7 +1002,7 @@ static void level_reset() {
 	g_vars.level_completed_flag = 0;
 	g_vars.light.palette_flag1 = 0;
 	g_vars.light.palette_flag2 = 0;
-	g_vars.player_flying_flag = 0;
+	g_vars.player_flying_flag = false;
 	g_vars.player_gravity_flag = 0;
 
 	g_vars.objects_tbl[PLAYER_OFFSET].data.p.special_anim_num = 0;
@@ -1156,7 +1143,7 @@ bool level_objects_collide(const struct object_t *si, const struct object_t *di)
 	if (a >= d) {
 		return false;
 	}
-	if (g_vars.player_using_club_flag == 0) {
+	if (!g_vars.player_using_club_flag) {
 		d -= a;
 		if (g_vars.objects_tbl[PLAYER_OFFSET].data.p.y_velocity >= 128 || (d <= (b >> 1) && si != &g_vars.objects_tbl[PLAYER_OFFSET])) {
 			++g_vars.player_jump_monster_flag;
@@ -1170,7 +1157,7 @@ bool level_objects_collide(const struct object_t *si, const struct object_t *di)
 		SWAP(a, d);
 		b = spr_size_tbl[(si->spr_num & 0x1FFF) * 2];
 	}
-	if (g_vars.player_using_club_flag == 0) {
+	if (!g_vars.player_using_club_flag) {
 		b >>= 1;
 	}
 	return (a + b > d);
@@ -1433,7 +1420,7 @@ static void level_update_objects_axe() {
 			continue;
 		}
 	}
-	if (g_vars.player_flying_flag == 0) {
+	if (!g_vars.player_flying_flag) {
 		struct object_t *obj = &g_vars.objects_tbl[CLUB_OFFSET];
 		if (obj->spr_num != 0xFFFF) {
 			if (level_collide_axe_monsters(obj) || level_collide_axe_bonuses(obj)) {
@@ -1965,7 +1952,7 @@ static void level_update_player_jump() {
 	level_update_player_hdir_x_velocity(80);
 	level_update_player_y_velocity(192);
 	uint8_t num;
-	if (g_vars.player_flying_flag != 0) {
+	if (g_vars.player_flying_flag) {
 		num = 45;
 		if (g_vars.objects_tbl[PLAYER_OFFSET].data.p.y_velocity >= 0) {
 			++num;
@@ -2111,7 +2098,7 @@ static void level_update_player_anim_0(uint8_t al) {
 		level_update_player_anim_3_6_7(g_vars.objects_tbl[PLAYER_OFFSET].data.p.current_anim_num);
 		return;
 	}
-	g_vars.player_unk_counter1 = 0;
+	g_vars.player_runup_counter = 0;
 	level_update_screen_x_velocity();
 	level_update_player_x_velocity();
 	if (g_vars.level_force_x_scroll_flag == 0 && g_vars.objects_tbl[PLAYER_OFFSET].data.p.y_velocity != 0) {
@@ -2194,11 +2181,11 @@ static void level_update_player_anim_1(uint8_t al) {
 		return;
 	}
 	const int x_vel = abs(g_vars.objects_tbl[PLAYER_OFFSET].x_velocity);
-	if (x_vel >= 64 && g_vars.player_flying_flag != 0) {
-		if (g_vars.player_unk_counter1 < UCHAR_MAX) {
-			++g_vars.player_unk_counter1;
+	if (x_vel >= 64 && g_vars.player_flying_flag) {
+		if (g_vars.player_runup_counter < UCHAR_MAX) {
+			++g_vars.player_runup_counter;
 		}
-		if (g_vars.player_unk_counter1 == 23) {
+		if (g_vars.player_runup_counter == 23) {
 			level_init_object_hit_from_player_pos();
 		}
 	}
@@ -2218,7 +2205,7 @@ static void level_update_player_anim_2_helper(uint8_t al) {
 	if (value < 9) {
 		static const int8_t y_tbl[] = { -65, -51, -35, -20, -10, -5, -2, -1, 0 };
 		int16_t ax = y_tbl[value];
-		if (g_vars.player_flying_flag != 0) {
+		if (g_vars.player_flying_flag) {
 			ax >>= 1;
 		}
 		g_vars.objects_tbl[PLAYER_OFFSET].data.p.y_velocity += ax;
@@ -2275,7 +2262,7 @@ static void level_update_player_anim_5(uint8_t al) {
 		level_update_player_anim_3_6_7(g_vars.objects_tbl[PLAYER_OFFSET].data.p.current_anim_num);
 		return;
 	}
-	g_vars.player_unk_counter1 = 0;
+	g_vars.player_runup_counter = 0;
 	g_vars.player_action_counter = 4;
 	level_update_player_club_power();
 	const uint8_t *p = level_update_player_anim2_num(al, al * 2);
@@ -2292,13 +2279,13 @@ static void level_update_player_anim_8(uint8_t al) {
 }
 
 static void level_update_player_anim_34(uint8_t al) {
-	if (g_vars.player_unk_counter1 < 24) {
+	if (g_vars.player_runup_counter < 24) {
 		level_update_player_anim_2_helper(al);
 	} else {
 		g_vars.player_gravity_flag = 1;
 		g_vars.player_flying_counter = 24;
 		g_vars.objects_tbl[PLAYER_OFFSET].y_pos -= 3;
-		g_vars.player_unk_counter1 = 0;
+		g_vars.player_runup_counter = 0;
 		level_update_screen_x_velocity();
 		level_update_screen_x_velocity();
 	}
@@ -2362,15 +2349,15 @@ static void level_update_player_decor() {
 }
 
 static void level_update_player_flying() {
-	if (g_vars.player_flying_flag == 0) {
+	if (!g_vars.player_flying_flag) {
 		return;
 	}
 	if (g_vars.player_gravity_flag != 0) {
 		const int x_vel = abs(g_vars.objects_tbl[PLAYER_OFFSET].x_velocity);
 		int num = 48;
-		if (x_vel < 64) {
+		if (x_vel <= 64) {
 			++num;
-			if (x_vel < 32) {
+			if (x_vel <= 32) {
 				++num;
 			}
 		}
@@ -2401,7 +2388,7 @@ static void level_update_player_flying() {
 			spr_num |= 0x8000;
 			x_delta = -x_delta;
 		}
-		if (g_vars.player_unk_counter1 > 24 && (spr_num & 0x1FFF) < 121) {
+		if (g_vars.player_runup_counter > 24 && (spr_num & 0x1FFF) < 121) {
 			++spr_num;
 		}
 		g_vars.objects_tbl[CLUB_OFFSET].spr_num = spr_num;
@@ -2492,13 +2479,13 @@ static void level_update_player() {
 	if (g_vars.player_update_counter < USHRT_MAX) {
 		++g_vars.player_update_counter;
 	}
-	if (g_vars.player_flying_flag != 0) {
+	if (g_vars.player_flying_flag) {
 		al += 0x20;
 		if ((g_vars.player_gravity_flag &= 1) != 0) {
 			if (g_vars.input.key_up) {
 				if (g_vars.player_flying_anim_index == 6) {
 					if (g_vars.objects_tbl[PLAYER_OFFSET].data.p.y_velocity > 16) {
-						g_vars.player_flying_flag |= 2;
+						g_vars.player_gravity_flag |= 2;
 					}
 				} else {
 					++g_vars.player_flying_anim_index;
@@ -2520,7 +2507,7 @@ static void level_update_player() {
 				if (g_vars.player_flying_anim_index != 0) {
 					--g_vars.player_flying_anim_index;
 				}
-				g_vars.player_flying_flag |= 2;
+				g_vars.player_gravity_flag |= 2;
 				if (g_vars.player_flying_anim_index <= 1) {
 					const int x = abs(g_vars.objects_tbl[PLAYER_OFFSET].x_velocity >> 4);
 					if (g_vars.player_flying_counter < x * 5) {
@@ -2665,8 +2652,8 @@ static void level_update_player_collision() {
 				g_vars.objects_tbl[PLAYER_OFFSET].data.p.y_velocity = -128;
 				g_vars.objects_tbl[PLAYER_OFFSET].x_velocity = -(g_vars.objects_tbl[PLAYER_OFFSET].x_velocity << 2);
 				g_vars.player_gravity_flag = 0;
-				if (g_vars.player_flying_flag != 0) {
-					g_vars.player_flying_flag = 0;
+				if (g_vars.player_flying_flag) {
+					g_vars.player_flying_flag = false;
 				} else {
 					if ((g_options.cheats & CHEATS_UNLIMITED_ENERGY) == 0) {
 						--g_vars.player_energy;
@@ -2837,8 +2824,8 @@ static void level_update_player_collision() {
 			}
 		} else if (num <= 74) {
 			play_sound(8);
-			if (g_vars.player_flying_flag == 0) {
-				g_vars.player_flying_flag = 1;
+			if (!g_vars.player_flying_flag) {
+				g_vars.player_flying_flag = true;
 				g_vars.objects_tbl[PLAYER_OFFSET].data.p.current_anim_num = 0xFF;
 				level_clear_item(obj);
 			}
@@ -2991,7 +2978,7 @@ static void level_update_gates() {
 	if (g_vars.player_action_counter == 0) {
 		return;
 	}
-	if (g_vars.player_flying_flag != 0) {
+	if (g_vars.player_flying_flag) {
 		return;
 	}
 	uint16_t pos = level_get_player_tile_pos();
@@ -3198,6 +3185,9 @@ static bool level_update_objects_anim() {
 	}
 	input_check_ctrl_alt_e();
 	play_music(17);
+	if (!g_res.dos_demo) {
+		do_gameover_screen();
+	}
 	g_vars.objects_tbl[PLAYER_OFFSET].spr_num = 13;
 	g_vars.level_num = 0;
 	g_vars.score = 0;
@@ -3327,8 +3317,12 @@ static void level_draw_messages() {
 static void level_resize() {
 	if (g_sys.resize) {
 		video_resize();
-		g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
-		level_init_tilemap();
+		if (!g_sys.centred) {
+			g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
+			level_init_tilemap();
+		} else {
+			video_copy_centred(g_res.background, 320, 200);
+		}
 		sprintf(g_vars.message.s, "%dx%d", GAME_SCREEN_W, GAME_SCREEN_H);
 		g_sys.add_message(g_vars.message.s);
 		level_draw_messages();
@@ -3346,7 +3340,8 @@ static void level_sync() {
 	level_resize();
 	level_update_palette();
 	g_sys.update_screen(g_res.vga, 1);
-	g_sys.render_clear_sprites();
+	if (!g_sys.centred)
+		g_sys.render_clear_sprites();
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
 	g_sys.sleep(MAX(diff, 10));
 	g_vars.timestamp = g_sys.get_timestamp();
@@ -3362,6 +3357,7 @@ static void level_draw_objects() {
 		if (obj->hit_counter != 0) {
 			--obj->hit_counter;
 		}
+		print_debug(DBG_GAME, "draw obj %d counter %d spr_num %d x_pos %d y_pos %d", i, obj->hit_counter, obj->spr_num, obj->x_pos, obj->y_pos);
 		if (obj->hit_counter != 0 && (g_vars.level_draw_counter & 3) != 0) {
 			continue;
 		}
@@ -3371,6 +3367,7 @@ static void level_draw_objects() {
 		int spr_h = spr_size_tbl[2 * spr_num + 1];
 		spr_y_pos -= spr_h;
 		if (spr_y_pos > TILEMAP_SCREEN_H || spr_y_pos + spr_h < 0) {
+			print_debug(DBG_GAME, "spr_y_pos > TILEMAP_SCREEN_H");
 			continue;
 		}
 		int spr_x_pos = obj->x_pos - ((g_vars.tilemap.x << 4) + g_vars.tilemap.scroll_dx);
@@ -3380,6 +3377,7 @@ static void level_draw_objects() {
 		}
 		spr_x_pos -= spr_w;
 		if (spr_x_pos > TILEMAP_SCREEN_W || spr_x_pos + spr_w < 0) {
+			print_debug(DBG_GAME, "spr_x_pos > TILEMAP_SCREEN_W");
 			continue;
 		}
 		video_draw_sprite(spr_num, spr_x_pos, spr_y_pos, spr_hflip, obj->centred);
@@ -3658,7 +3656,7 @@ static void level_completed_bonuses_animation() {
 	g_vars.objects_tbl[PLAYER_OFFSET].x_velocity = 0;
 	level_completed_bonuses_animation_draw_score();
 	level_clear_monsters();
-	g_vars.player_flying_flag = 0;
+	g_vars.player_flying_flag = false;
 	g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim = object_anim_tbl[1];
 	while (1) {
 		level_update_object_anim(g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim);
@@ -3812,34 +3810,47 @@ static void update_object_demo_animation(struct object_t *obj) {
 	}
 	int spr_num = (num & 0x1FFF) + g_res.spr_monsters_offset;
 	if (obj->data.m.x_velocity < 0) {
-		num |= 0x8000;
+		spr_num |= 0x8000;
 	}
 	obj->spr_num = spr_num;
 	obj->data.m.anim = p + 2;
 }
 
 void do_demo_animation() {
+	memset(&g_vars.objects_tbl[CLUB_OFFSET], 0, sizeof(struct object_t) * OBJECTS_COUNT);
+	for (int i = 0; i < OBJECTS_COUNT; ++i) {
+		struct object_t *obj = &g_vars.objects_tbl[i];
+		obj->spr_num = 0xFFFF;
+	}
+	video_load_sprites();
+	g_vars.tilemap.x = g_vars.tilemap.scroll_dx = 0;
+	g_vars.tilemap.y = g_vars.tilemap.scroll_dy = 0;
 	g_vars.objects_tbl[PLAYER_OFFSET].x_pos = 0;
 	g_vars.objects_tbl[PLAYER_OFFSET].y_pos = 169;
 	g_vars.objects_tbl[PLAYER_OFFSET].data.p.hdir = 0;
 	g_vars.objects_tbl[PLAYER_OFFSET].x_velocity = 0;
-	static const uint8_t data[] = {
-		0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 3, 0, 3, 0,
-		4, 0, 4, 0, 5, 0, 5, 0, 0xE8, 0xFF
-	};
-	g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim = data;
+	g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim = demo_anim_data;
+	g_vars.objects_tbl[PLAYER_OFFSET].centred = true;
 	g_vars.objects_tbl[AXE_OFFSET].x_pos = 48;
 	g_vars.objects_tbl[AXE_OFFSET].y_pos = 169;
-	g_vars.objects_tbl[AXE_OFFSET].x_velocity = 0;
+	g_vars.objects_tbl[AXE_OFFSET].data.m.x_velocity = 0;
+	g_vars.objects_tbl[AXE_OFFSET].data.m.y_velocity = 0;
 	g_vars.objects_tbl[AXE_OFFSET].data.m.anim = &monster_anim_tbl[0x2EA];
-	g_vars.player_flying_flag = 0;
+	g_vars.objects_tbl[AXE_OFFSET].centred = true;
+	g_vars.player_flying_flag = false;
 	int counter = 0;
+	g_sys.centred = true;
 	do {
+		g_sys.render_clear_sprites();
 		++counter;
 		level_update_object_anim(g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim);
 		update_object_demo_animation(&g_vars.objects_tbl[AXE_OFFSET]);
 		level_draw_objects();
 		level_sync();
+		if (g_sys.input.quit) {
+			g_sys.centred = false;
+			return;
+		}
 		int dx = 5;
 		g_vars.objects_tbl[PLAYER_OFFSET].x_pos += dx;
 		if ((counter & 3) == 0) {
@@ -3850,16 +3861,17 @@ void do_demo_animation() {
 	g_vars.objects_tbl[PLAYER_OFFSET].data.p.hdir = -1;
 	g_vars.objects_tbl[AXE_OFFSET].data.m.x_velocity = -1;
 	g_vars.objects_tbl[AXE_OFFSET].data.m.y_velocity = 0;
-	for (int i = 1; i < AXE_COUNT - 1; ++i) {
+	for (int i = 1; i < 3; ++i) {
 		struct object_t *obj = &g_vars.objects_tbl[AXE_OFFSET + i];
 		*obj = g_vars.objects_tbl[AXE_OFFSET];
 	}
-	for (int i = 0; i < AXE_COUNT - 1; ++i) {
+	for (int i = 0; i < 3; ++i) {
 		struct object_t *obj = &g_vars.objects_tbl[AXE_OFFSET + i];
 		obj->x_pos = g_vars.objects_tbl[PLAYER_OFFSET].x_pos + i * 30;
 		obj->y_pos = g_vars.objects_tbl[PLAYER_OFFSET].y_pos - i * 3;
 	}
 	do {
+		g_sys.render_clear_sprites();
 		level_update_object_anim(g_vars.objects_tbl[PLAYER_OFFSET].data.p.anim);
 		for (int i = 0; i < 3; ++i) {
 			struct object_t *obj = &g_vars.objects_tbl[AXE_OFFSET + i];
@@ -3873,8 +3885,12 @@ void do_demo_animation() {
 		}
 		level_draw_objects();
 		level_sync();
+		if (g_sys.input.quit) {
+			break;
+		}
 		g_vars.objects_tbl[PLAYER_OFFSET].x_pos -= 7;
 	} while (g_vars.objects_tbl[PLAYER_OFFSET].x_pos >= 0);
+	g_sys.centred = false;
 }
 
 static void level_pause() {
@@ -3897,6 +3913,117 @@ static void level_pause() {
 	level_update_player();
 	level_init_tilemap();
 	print_debug(DBG_SYSTEM, "Resuming");
+}
+
+static const int GAMEOVER_Y_OFFSET = 185;
+
+static void do_gameover_animation_helper(const char *gameover) {
+	if ((g_vars.level_draw_counter & 3) == 0) {
+		int spr_num = (g_vars.objects_tbl[MONSTERS_OFFSET + 10].spr_num & 0x1FFF) + 1;
+		if (spr_num >= 110) {
+			spr_num = 104;
+		}
+		g_vars.objects_tbl[MONSTERS_OFFSET + 10].spr_num = spr_num;
+	}
+	for (int i = 0; i < strlen(gameover); ++i) {
+		struct object_t *obj = &g_vars.objects_tbl[PLAYER_OFFSET + i];
+		int y_vel = obj->data.m.y_velocity + 1;
+		if (y_vel >= 8) {
+			y_vel = 1 - y_vel;
+		}
+		obj->data.m.y_velocity = y_vel;
+		obj->y_pos += y_vel;
+	}
+	for (int i = 0; i < 3; ++i) {
+		struct object_t *obj = &g_vars.objects_tbl[BONUSES_OFFSET + 8 + i];
+		obj[-20].spr_num = 0xFFFF;
+		const int rx = (((int8_t)cos_tbl[obj->x_friction]) * 65) >> 6;
+		obj->x_pos = rx + 150;
+		const int ry = (((int8_t)sin_tbl[obj->x_friction]) * 10) >> 6;
+		obj->y_pos = ry + 309 - GAMEOVER_Y_OFFSET;
+		obj->data.m.x_velocity = ry;
+		obj->x_friction += 2;
+		update_object_demo_animation(obj);
+	}
+	for (int i = 0; i < 2; ++i) {
+		struct object_t *si = &g_vars.objects_tbl[BONUSES_OFFSET + 8 + i];
+		struct object_t *di = si + 1;
+		if (di->y_pos >= si->x_pos) {
+			SWAP(*si, *di);
+		}
+	}
+	for (int i = 0; i < 2; ++i) {
+		struct object_t *di = &g_vars.objects_tbl[MONSTERS_OFFSET + i];
+		struct object_t *si = &g_vars.objects_tbl[BONUSES_OFFSET + 8 + i];
+		if (si->y_pos >= 309 - GAMEOVER_Y_OFFSET) {
+			*di = *si;
+			si->spr_num = 0xFFFF;
+		}
+	}
+}
+
+void do_gameover_animation() {
+	memset(&g_vars.objects_tbl[CLUB_OFFSET], 0, sizeof(struct object_t) * OBJECTS_COUNT);
+	for (int i = 0; i < OBJECTS_COUNT; ++i) {
+		g_vars.objects_tbl[i].spr_num = 0xFFFF;
+	}
+	video_load_sprites();
+	g_vars.tilemap.x = g_vars.tilemap.scroll_dx = 0;
+	g_vars.tilemap.y = g_vars.tilemap.scroll_dy = 0;
+	static const char *gameover = "GAMEOVER";
+	int x_pos = 44;
+	for (int i = 0; i < strlen(gameover); ++i) {
+		struct object_t *obj = &g_vars.objects_tbl[PLAYER_OFFSET + i];
+		obj->spr_num = 0xB0 + gameover[i];
+		obj->x_pos = x_pos;
+		obj->y_pos = 224 - GAMEOVER_Y_OFFSET;
+		obj->centred = true;
+		obj->data.m.y_velocity = random_get_number() & 7;
+		if (obj->data.m.y_velocity == 0) {
+			obj->data.m.y_velocity = 1;
+		}
+		x_pos += 24;
+		if (i == 3) {
+			x_pos += 48;
+		}
+	}
+	for (int i = 0; i < 4; ++i) {
+		g_vars.objects_tbl[MONSTERS_OFFSET + 8 + i].centred = true;
+	}
+	for (int i = 0; i < 3; ++i) {
+		g_vars.objects_tbl[BONUSES_OFFSET + 8 + i].centred = true;
+	}
+	g_vars.objects_tbl[MONSTERS_OFFSET + 8].x_pos = 150;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 8].y_pos = 309 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 8].spr_num = 0x64;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 9].x_pos = 151;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 9].y_pos = 264 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 9].spr_num = 0x1C4;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 10].x_pos = 150;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 10].y_pos = 289 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 10].spr_num = 0x68;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 11].x_pos = 150;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 11].y_pos = 281 - GAMEOVER_Y_OFFSET;
+	g_vars.objects_tbl[MONSTERS_OFFSET + 11].spr_num = 0x62;
+	g_vars.objects_tbl[BONUSES_OFFSET + 8].x_friction = 0;
+	g_vars.objects_tbl[BONUSES_OFFSET + 8].data.m.anim = gameover_anim1_data;
+	g_vars.objects_tbl[BONUSES_OFFSET + 9].x_friction = 85;
+	g_vars.objects_tbl[BONUSES_OFFSET + 9].data.m.anim = gameover_anim3_data;
+	g_vars.objects_tbl[BONUSES_OFFSET + 10].x_friction = 170;
+	g_vars.objects_tbl[BONUSES_OFFSET + 10].data.m.anim = gameover_anim3_data;
+	int timer_counter = 0;
+	g_sys.centred = true;
+	do {
+		g_sys.render_clear_sprites();
+		do_gameover_animation_helper(gameover);
+		level_draw_objects();
+		level_update_panel();
+		level_sync();
+		if (g_sys.input.quit) {
+			return;
+		}
+	} while (timer_counter < 630 && !g_sys.input.space);
+	g_sys.centred = false;
 }
 
 void do_level() {

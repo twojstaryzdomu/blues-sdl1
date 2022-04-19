@@ -122,19 +122,18 @@ static bool fade_palettes(const uint8_t *target, uint8_t *current) {
 	bool flag = false;
 	for (int i = 0; i < 768; ++i) {
 		int al = current[i];
-		const int bh = target[i] - al;
-		if (bh != 0) {
-			if (abs(bh) < 2) {
+		const int diff = target[i] - al;
+		if (diff != 0) {
+			if (abs(diff) < 2) {
 				flag = true;
-				al = target[i];
+				current[i] = target[i];
 			} else {
 				if (target[i] < al) {
-					al -= 2;
+					current[i] = al - 2;
 				} else {
-					al += 2;
+					current[i] = al + 2;
 				}
 			}
-			current[i] = al;
 		}
 	}
 	return flag;
@@ -250,7 +249,38 @@ static void do_map(){
 	}
 }
 
-static void do_menu() {
+void do_gameover_animation();
+
+void do_gameover_screen() {
+	uint8_t *data = load_file("GAMEOVER.SQZ");
+	if (data) {
+		video_clear();
+		video_copy_img(data);
+		video_copy_centred(g_res.background, 320, 200);
+		g_sys.set_screen_palette(gameover_palette_data, 0, 16, 6);
+		do_gameover_animation();
+		g_sys.fade_out_palette();
+		free(data);
+	}
+}
+
+void do_demo_animation();
+
+static void do_menu2() {
+	uint8_t *data = load_file("MENU2.SQZ");
+	if (data) {
+		video_copy_img(data);
+		video_copy_centred(g_res.background, 320, 200);
+		g_sys.set_screen_palette(data + 32000, 0, 16, 6);
+		g_sys.update_screen(g_res.vga, 0);
+		g_sys.fade_in_palette();
+		do_demo_animation();
+		g_sys.fade_out_palette();
+		free(data);
+	}
+}
+
+static bool do_menu() {
 	uint8_t *data = load_file("MENU.SQZ");
 	if (data) {
 		g_sys.set_screen_palette(data, 0, 256, 6);
@@ -259,6 +289,7 @@ static void do_menu() {
 			update_screen_img(data + 768, 0);
 			g_sys.fade_in_palette();
 			memset(g_vars.input.keystate, 0, sizeof(g_vars.input.keystate));
+			const uint32_t start = g_sys.get_timestamp();
 			while (!g_sys.input.quit) {
 				wait_input(30);
 				if (g_vars.input.keystate[2] || g_vars.input.keystate[0x4F] || g_sys.input.space) {
@@ -273,10 +304,15 @@ static void do_menu() {
 				if (g_sys.resize) {
 					break;
 				}
+				if (!g_res.dos_demo && g_sys.get_timestamp() - start >= 15 * 1000) {
+					g_sys.fade_out_palette();
+					return true;
+				}
 			}
 		} while (g_sys.resize);
 		free(data);
 	}
+	return false;
 }
 
 static void do_photos_screen() {
@@ -385,7 +421,9 @@ static void game_run(const char *data_path) {
 			if (g_res.dos_demo) {
 				do_demo_screen();
 			}
-			do_menu();
+			while (do_menu()) {
+				do_menu2();
+			}
 			if (g_sys.input.quit) {
 				break;
 			}
