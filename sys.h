@@ -85,6 +85,7 @@ struct sys_t {
 	bool	resize;
 	bool	rehint;
 	bool	reset_palette;
+	bool	centred;
 	int8_t	palette_offset;
 	int	w, h;
 };

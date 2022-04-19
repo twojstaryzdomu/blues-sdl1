@@ -313,7 +313,12 @@ static void sdl2_set_palette_color(int i, const uint8_t *colors) {
 }
 
 static void sdl2_update_sprites_screen() {
-	SDL_RenderSetClipRect(_renderer, &_sprites_cliprect);
+	if (!g_sys.centred) {
+		SDL_RenderSetClipRect(_renderer, &_sprites_cliprect);
+	} else {
+		SDL_Rect c = { .x = _centred_x_offset, .y = _centred_y_offset, .w = ORIG_W, .h = ORIG_H };
+		SDL_RenderSetClipRect(_renderer, &c);
+	}
 	for (int i = 0; i < _sprites_count; ++i) {
 		const struct sprite_t *spr = &_sprites[i];
 		struct spritesheet_t *sheet = &_spritesheets[spr->sheet];
