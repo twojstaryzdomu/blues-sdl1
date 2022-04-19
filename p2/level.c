@@ -3917,7 +3917,7 @@ static void level_pause() {
 	print_debug(DBG_SYSTEM, "Resuming");
 }
 
-static const int GAMEOVER_Y_OFFSET = 185;
+static const int GAMEOVER_Y_OFFSET = 200;
 
 static void do_gameover_animation_helper(const char *gameover) {
 	if ((g_vars.level_draw_counter & 3) == 0) {
