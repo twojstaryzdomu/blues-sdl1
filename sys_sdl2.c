@@ -542,7 +542,7 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 			src = 0;
 			dst = &r;
 		}
-		SDL_FillRect(_renderer, &r, -1);
+		SDL_FillRect(_renderer, &r, 0);
 		SDL_BlitSurface(_texture, src, _renderer, dst);
 		sdl2_update_sprites_screen();
 		if (_slide.f)
