@@ -73,6 +73,7 @@ static char _s[MESSAGE_MAX];
 static SDL_GameController *_controller;
 static SDL_Joystick *_joystick;
 static int _controller_up;
+static bool _controller_up_setup;
 
 static int sdl2_init() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | (g_sys.audio ? SDL_INIT_AUDIO : 0));
@@ -683,6 +684,13 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 		if (keydown)
 			sdl2_rescale_screen(1);
 		break;
+	case SDLK_j:
+		if (keydown) {
+			sprintf(_s, "Press jump button");
+			g_sys.add_message(_s);
+			_controller_up_setup = true;
+		}
+		break;
 	case SDLK_l:
 		if (keydown)
 			sdl2_rehint_screen("linear");
@@ -760,6 +768,16 @@ static void handle_controlleraxis(int axis, int value, struct input_t *input) {
 }
 
 static void handle_controllerbutton(int button, bool pressed, struct input_t *input) {
+	if (_controller_up_setup) {
+		if (pressed) {
+			_controller_up = button;
+			_controller_up_setup = false;
+			int a = _controller_up + 65;
+			sprintf(_s, "Jump on %s key", (char*)&a);
+			g_sys.add_message(_s);
+			return;
+		}
+	}
 	if (button == _controller_up) {
 		if (pressed) {
 			input->direction |= INPUT_DIRECTION_UP;

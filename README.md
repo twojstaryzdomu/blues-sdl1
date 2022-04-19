@@ -63,6 +63,7 @@ In-game palette cycling is only available in Prehistorik 2.
 |      D      | Decrease scale                       |
 |      H      | Toggle Hybrid crack palette bug      |
 |      I      | Increase scale                       |
+|      J      | Configure jump button                |
 |      L      | Set scaling filter to linear         |
 |      N      | Set scaling filter to nearest        |
 |      O      | Restore original scale & screen size |
