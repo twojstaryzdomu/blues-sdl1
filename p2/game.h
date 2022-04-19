@@ -245,6 +245,8 @@ struct vars_t {
 
 	uint8_t palette;
 
+	bool slide;
+
 	struct {
 		int16_t x, y;
 		int16_t prev_x, prev_y;
