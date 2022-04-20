@@ -256,7 +256,7 @@ void do_gameover_screen() {
 	if (data) {
 		video_clear();
 		video_copy_img(data);
-		video_copy_centred(g_res.background, 320, 200);
+		video_copy(g_res.background, 320, 200);
 		g_sys.set_screen_palette(gameover_palette_data, 0, 16, 6);
 		do_gameover_animation();
 		video_clear();

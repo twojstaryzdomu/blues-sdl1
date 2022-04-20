@@ -404,6 +404,7 @@ extern void	video_draw_string(int offset, int hspace, const char *s);
 extern void	video_clear();
 extern void	video_copy_img(const uint8_t *src);
 extern void	video_copy_map(const uint8_t *src);
+extern void	video_copy(uint8_t *src, int w, int h);
 extern void	video_copy_centred(uint8_t *src, int w, int h);
 extern void	video_copy_background();
 extern void	video_draw_panel(const uint8_t *src);

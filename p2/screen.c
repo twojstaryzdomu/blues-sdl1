@@ -158,12 +158,20 @@ void video_copy_map(const uint8_t *src) {
 	decode_planar(src, g_res.map, MAP_W, MAP_W, MAP_H, 0xFF);
 }
 
-void video_copy_centred(uint8_t *src, int w, int h) {
-	int y_offs = (GAME_SCREEN_H - h) / 2;
-	int x_offs = (GAME_SCREEN_W - w) / 2;
+void video_copy_offset(uint8_t *src, int w, int h, int x_offs, int y_offs) {
 	for (int y = 0; y < h; ++y) {
 		memcpy(g_res.vga + (y_offs + y) * GAME_SCREEN_W + x_offs, src + y * w, w);
 	}
+}
+
+void video_copy(uint8_t *src, int w, int h) {
+	video_copy_offset(src, w, h, 0, 0);
+}
+
+void video_copy_centred(uint8_t *src, int w, int h) {
+	int x_offs = (GAME_SCREEN_W - w) / 2;
+	int y_offs = (GAME_SCREEN_H - h) / 2;
+	video_copy_offset(src, w, h, x_offs, y_offs);
 }
 
 void video_copy_background() {
