@@ -8,6 +8,8 @@ struct options_t g_options;
 
 static const char *DEFAULT_DATA_PATH = ".";
 
+static int DEFAULT_JUMP_BUTTON = 0;
+
 static const char *USAGE =
 	"Usage: %s [OPTIONS]...\n"
 	"  --datapath=PATH   Path to data files (default '.')\n"
@@ -21,11 +23,9 @@ static const char *USAGE =
 	"  --hybrid          Enable fuchsia color as in Hybrid crack\n"
 	"  --palette=NUM     Pick palette NUM for screen colors\n"
 	"  --nomap           Do not scroll map before each level\n"
-	"  --jumpbtn=NUM     Select button NUM for jump (default 0)\n"
+	"  --jumpbtn=NUM     Select button NUM for jump (default %d)\n"
 	"  --nosound         Disable sound\n"
 ;
-
-static int DEFAULT_JUMP_BUTTON = 0;
 
 static struct game_t *detect_game(const char *data_path) {
 #if 0
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
 			g_sys.audio = false;
 			break;
 		default:
-			fprintf(stdout, USAGE, argv[0], ORIG_W, ORIG_H);
+			fprintf(stdout, USAGE, argv[0], ORIG_W, ORIG_H, DEFAULT_JUMP_BUTTON);
 			return -1;
 		}
 	}
