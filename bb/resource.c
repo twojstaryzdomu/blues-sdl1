@@ -122,9 +122,9 @@ static void dither_cga(int num, uint8_t *dst) {
 }
 
 static void copy_cga(uint8_t *dst, int dst_pitch, uint8_t *dither_lut) {
-	for (int y = 0; y < 200; ++y) {
+	for (int y = 0; y < ORIG_H; ++y) {
 		const uint8_t *p = dither_lut + (y & 1) * 0x10;
-		for (int x = 0; x < 320; ++x) {
+		for (int x = 0; x < ORIG_W; ++x) {
 			dst[x] = p[dst[x]];
 		}
 		dst += dst_pitch;
@@ -164,7 +164,7 @@ static void load_iff(const uint8_t *data, uint32_t size, uint8_t *dst, int dst_p
 				const int planes = buf[8];
 				const int compression = buf[10];
 				print_debug(DBG_RESOURCE, "w %d h %d planes %d compression %d", w, h, planes, compression);
-				if (w != 320 || h < 200) {
+				if (w != ORIG_W || h < ORIG_H) {
 					print_error("Unhandled LBM dimensions %d,%d", w, h);
 					return;
 				}

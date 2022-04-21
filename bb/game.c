@@ -38,7 +38,7 @@ static void do_title_screen() {
 	do {
 		screen_resize();
 		load_img(g_res.amiga_data ? "blues.lbm" : "pres.sqz", GAME_SCREEN_W, g_options.cga_colors ? 0 : -1);
-		screen_copy_centred(g_res.vga, 320, 200);
+		screen_copy_centred(g_res.vga, ORIG_W, ORIG_H);
 		g_sys.fade_in_palette();
 		do {
 			update_input();
@@ -84,7 +84,7 @@ static void do_select_player() {
 		screen_resize();
 		screen_init();
 		load_img(g_res.amiga_data ? "choix.lbm" : "choix.sqz", GAME_SCREEN_W, g_options.cga_colors ? 1 : -1);
-		screen_copy_centred(g_res.vga, 320, 200);
+		screen_copy_centred(g_res.vga, ORIG_W, ORIG_H);
 		if (g_res.spr_count <= SPRITES_COUNT) {
 			screen_load_graphics(g_options.cga_colors ? g_res.cga_lut_sqv : 0, 0);
 		}
@@ -251,11 +251,11 @@ static void do_inter_screen() {
 	static const uint8_t ypos[] = { 0xAA, 0x37, 0x28, 0x5F, 0xA5, 0xAA };
 	do {
 		screen_resize();
-		offset_x = (GAME_SCREEN_W > 320) ? (GAME_SCREEN_W - 320) / 2 : 0;
-		offset_y = (GAME_SCREEN_H > 200) ? (GAME_SCREEN_H - 200) / 2 : 0;
+		offset_x = (GAME_SCREEN_W > ORIG_W) ? (GAME_SCREEN_W - ORIG_W) / 2 : 0;
+		offset_y = (GAME_SCREEN_H > ORIG_H) ? (GAME_SCREEN_H - ORIG_H) / 2 : 0;
 		screen_init();
 		load_img(g_res.amiga_data ? "inter.lbm" : "inter.sqz", GAME_SCREEN_W, g_options.cga_colors ? 9 : -1);
-		screen_copy_centred(g_res.vga, 320, 200);
+		screen_copy_centred(g_res.vga, ORIG_W, ORIG_H);
 		screen_clear_sprites();
 		if (g_vars.level > 1) {
 			for (int i = 0; i < g_vars.level - 1; ++i) {

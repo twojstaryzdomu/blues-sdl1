@@ -2130,7 +2130,7 @@ static void level_update_players() {
 
 static void init_panel(int x_offset) {
 	for (int y = 0; y < PANEL_H; ++y) {
-		memcpy(g_res.vga + (TILEMAP_SCREEN_H + y) * GAME_SCREEN_W + x_offset, g_res.board + y * 320, 320);
+		memcpy(g_res.vga + (TILEMAP_SCREEN_H + y) * GAME_SCREEN_W + x_offset, g_res.board + y * ORIG_W, ORIG_W);
 	}
 	if (g_vars.player == 1) {
 		video_draw_dot_pattern(x_offset);
@@ -2145,7 +2145,7 @@ static void draw_panel_vinyl(int offset, int spr, int x_offset) {
 	const int x_dst = (offset % 80) * 4 + 2 + x_offset;
 	for (int y = 0; y < 16; ++y) {
 		memcpy(g_res.vga + (y_dst + y) * GAME_SCREEN_W + x_dst, src, 16);
-		src += 320;
+		src += ORIG_W;
 	}
 }
 
@@ -2155,7 +2155,7 @@ static void draw_panel_energy(int offset, int count, int x_offset) {
 	const int x_dst = (offset % 80) * 4 + x_offset;
 	for (int y = 0; y < 6; ++y) {
 		memcpy(g_res.vga + (y_dst + y) * GAME_SCREEN_W + x_dst, src, 40);
-		src += 320;
+		src += ORIG_W;
 	}
 }
 
@@ -2175,14 +2175,14 @@ static void draw_panel_number(int bp, int di, int num, int x_offset) {
 		const uint8_t *src = g_res.board + bp + digits[count - 1] * 8;
 		for (int y = 0; y < 8; ++y) {
 			memcpy(g_res.vga + (y_dst + y) * TILEMAP_SCREEN_W + x_dst, src, 8);
-			src += 320;
+			src += ORIG_W;
 		}
 		x_dst += 8;
 	}
 }
 
 static void draw_panel() {
-	const int x_offset = (GAME_SCREEN_W - 320) / 2;
+	const int x_offset = (GAME_SCREEN_W - ORIG_W) / 2;
 	init_panel(x_offset);
 	draw_panel_number(0x1E40, 0x435, MIN(g_vars.level_time, 999), x_offset);
 	const int bp = 0x1E90;

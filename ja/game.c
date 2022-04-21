@@ -341,7 +341,7 @@ void do_game_win_screen() {
 				break;
 			}
 			g_sys.fade_out_palette();
-			memcpy(g_res.tmp + 768, g_res.background, 64000);
+			memcpy(g_res.tmp + 768, g_res.background, ORIG_W * ORIG_H);
 		}
 	} while (g_sys.resize);
 }

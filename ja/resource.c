@@ -1,12 +1,13 @@
 
 #include <sys/param.h>
 #include "resource.h"
+#include "sys.h"
 #include "unpack.h"
 #include "util.h"
 
 static const int TMP_SIZE = 72728;
 
-static const int BACKGROUND_SIZE = 320 * 200;
+static const int BACKGROUND_SIZE = ORIG_W * ORIG_H;
 
 static const char *_datapath;
 

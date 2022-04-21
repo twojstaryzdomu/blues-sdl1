@@ -34,7 +34,7 @@ void video_draw_string(const char *s, int offset, int hspace) {
 			} else {
 				code -= 0x16;
 			}
-			ja_decode_chr(g_res.font + code * 200, 200, g_res.tmp + 768 + offset, 320);
+			ja_decode_chr(g_res.font + code * ORIG_H, ORIG_H, g_res.tmp + 768 + offset, ORIG_W);
 		}
 		offset += hspace;
 	}
@@ -61,20 +61,20 @@ void video_clear() {
 
 void video_copy_vga(int size) {
 	if (size == 0xB500) {
-		memcpy(g_res.background, g_res.tmp + 768, 64000);
+		memcpy(g_res.background, g_res.tmp + 768, ORIG_W * ORIG_H);
 	} else {
 		assert(size == 0x7D00);
 		g_sys.set_screen_palette(g_res.tmp, 0, 256, 6);
 		const uint8_t *src = g_res.tmp + 768;
-		if (GAME_SCREEN_W * GAME_SCREEN_H == 64000) {
-			memcpy(g_res.vga, src, 64000);
+		if (GAME_SCREEN_W * GAME_SCREEN_H == ORIG_W * ORIG_H) {
+			memcpy(g_res.vga, src, ORIG_W * ORIG_H);
 		} else {
-			uint16_t x_offs = (GAME_SCREEN_W - 320) / 2;
-			uint16_t y_offs = (GAME_SCREEN_H - 200) / 2;
+			uint16_t x_offs = (GAME_SCREEN_W - ORIG_W) / 2;
+			uint16_t y_offs = (GAME_SCREEN_H - ORIG_H) / 2;
 			video_clear();
-			for (int y = 0; y < MIN(200, GAME_SCREEN_H); ++y) {
-				memcpy(g_res.vga + (y + y_offs) * GAME_SCREEN_W + x_offs, src, MIN(320, GAME_SCREEN_W));
-				src += 320;
+			for (int y = 0; y < MIN(ORIG_H, GAME_SCREEN_H); ++y) {
+				memcpy(g_res.vga + (y + y_offs) * GAME_SCREEN_W + x_offs, src, MIN(ORIG_W, GAME_SCREEN_W));
+				src += ORIG_W;
 			}
 		}
 		g_sys.update_screen(g_res.vga, 0);
@@ -83,9 +83,9 @@ void video_copy_vga(int size) {
 
 void video_copy_backbuffer(int h) {
 	int y = 0;
-	for (; y < MIN(200, GAME_SCREEN_H) - h; ++y) {
-		for (int x = 0; x < GAME_SCREEN_W; x += 320) {
-			memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * 320, MIN(320, GAME_SCREEN_W - x));
+	for (; y < MIN(ORIG_H, GAME_SCREEN_H) - h; ++y) {
+		for (int x = 0; x < GAME_SCREEN_W; x += ORIG_W) {
+			memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * ORIG_W, MIN(ORIG_W, GAME_SCREEN_W - x));
 		}
 	}
 	h = GAME_SCREEN_H - y;
@@ -198,11 +198,11 @@ static void decode_motif_scanline(const uint8_t *src, uint8_t *dst, uint8_t colo
 }
 
 void ja_decode_motif(int num, uint8_t color) {
-	const uint8_t *src = g_res.motif + 25 * 320 * num;
+	const uint8_t *src = g_res.motif + 25 * ORIG_W * num;
 	int y = 0;
 	for (int j = 0; j < 25; ++j) {
 		for (int i = 0; i < 8; ++i) {
-			decode_motif_scanline(src + i * 40 + j * 320, g_res.vga + y * GAME_SCREEN_W, color);
+			decode_motif_scanline(src + i * 40 + j * ORIG_W, g_res.vga + y * GAME_SCREEN_W, color);
 			++y;
 		}
 	}
