@@ -88,9 +88,9 @@ static void do_credits() {
 
 static void update_screen_img(uint8_t *src, int present) {
 	int size = GAME_SCREEN_W * GAME_SCREEN_H;
-	if (size < 64000) {
+	if (size < ORIG_W * ORIG_H) {
 		return;
-	} else if (size == 64000) {
+	} else if (size == ORIG_W * ORIG_H) {
 		g_sys.update_screen(src, present);
 	} else {
 		if (!g_sys.resize) {
@@ -98,7 +98,7 @@ static void update_screen_img(uint8_t *src, int present) {
 		} else {
 			video_resize();
 		}
-		video_copy_centred(src, 320, 200);
+		video_copy_centred(src, ORIG_W, ORIG_H);
 		g_sys.update_screen(g_res.vga, present);
 	}
 }
@@ -147,7 +147,7 @@ static void do_present_screen() {
 			update_screen_img(data + 768, 0);
 			g_sys.fade_in_palette();
 		} else {
-			memmove(data + 768, data + 0x1030 * 16, 93 * 320);
+			memmove(data + 768, data + 0x1030 * 16, 93 * ORIG_W);
 			g_sys.set_screen_palette(data, 0, 256, 6);
 			update_screen_img(data + 768, 0);
 			g_sys.fade_in_palette();
@@ -213,7 +213,7 @@ static void do_map(){
 			video_load_sprites();
 			for (uint16_t x = 1; x <= MAP_W + (GAME_SCREEN_W < MAP_W ? 0 : (GAME_SCREEN_W - MAP_W) / 2); ++x) { /* 640*200*4bpp pic */
 				video_resize();
-				uint16_t y_offs = (GAME_SCREEN_H - 200) / 2;
+				uint16_t y_offs = (GAME_SCREEN_H - ORIG_H) / 2;
 				uint16_t pitch = MIN(x, GAME_SCREEN_W);
 				uint16_t window_w = x < GAME_SCREEN_W ? 0 : x - GAME_SCREEN_W;
 				g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, GAME_SCREEN_H);
@@ -256,11 +256,11 @@ void do_gameover_screen() {
 	if (data) {
 		video_clear();
 		video_copy_img(data);
-		video_copy(g_res.background, 320, 200);
+		video_copy(g_res.background, ORIG_W, ORIG_H);
 		g_sys.set_screen_palette(gameover_palette_data, 0, 16, 6);
 		do_gameover_animation();
 		video_clear();
-		video_copy_centred(g_res.background, 320, 200);
+		video_copy_centred(g_res.background, ORIG_W, ORIG_H);
 		g_sys.update_screen(g_res.vga, 0);
 		g_sys.fade_out_palette();
 		free(data);
@@ -273,7 +273,7 @@ static void do_menu2() {
 	uint8_t *data = load_file("MENU2.SQZ");
 	if (data) {
 		video_copy_img(data);
-		video_copy_centred(g_res.background, 320, 200);
+		video_copy_centred(g_res.background, ORIG_W, ORIG_H);
 		g_sys.set_screen_palette(data + 32000, 0, 16, 6);
 		g_sys.update_screen(g_res.vga, 0);
 		g_sys.fade_in_palette();

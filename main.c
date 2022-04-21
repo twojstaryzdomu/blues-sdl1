@@ -15,7 +15,7 @@ static const char *USAGE =
 	"  --cheats=MASK     Cheats mask\n"
 	"  --startpos=XxY    Start at position (X,Y)\n"
 	"  --fullscreen      Enable fullscreen\n"
-	"  --screensize=WxH  Graphics screen size (default 320x200)\n"
+	"  --screensize=WxH  Graphics screen size (default %dx%d)\n"
 	"  --cga             Enable CGA colors\n"
 	"  --dosscroll       Enable DOS style screen scrolling\n"
 	"  --hybrid          Enable fuchsia color as in Hybrid crack\n"
@@ -53,8 +53,8 @@ static struct game_t *detect_game(const char *data_path) {
 int main(int argc, char *argv[]) {
 	g_options.start_xpos16 = -1;
 	g_options.start_ypos16 = -1;
-	g_options.screen_w = 320;
-	g_options.screen_h = 200;
+	g_options.screen_w = ORIG_W;
+	g_options.screen_h = ORIG_H;
 	g_options.dos_scrolling = false;
 	g_options.amiga_copper_bars = true;
 	g_options.amiga_colors = true;
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
 			g_sys.audio = false;
 			break;
 		default:
-			fprintf(stdout, USAGE, argv[0]);
+			fprintf(stdout, USAGE, argv[0], ORIG_W, ORIG_H);
 			return -1;
 		}
 	}

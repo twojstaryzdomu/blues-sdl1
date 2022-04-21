@@ -615,7 +615,7 @@ static void level_init_tilemap() {
 		level_update_scrolling();
 		g_vars.tilemap_adjust_player_pos_flag = false;
 	} while ((g_vars.level_yscroll_center_flag | g_vars.level_xscroll_center_flag) != 0);
-	if (g_vars.level_num == 9 && GAME_SCREEN_H > 200) {
+	if (g_vars.level_num == 9 && GAME_SCREEN_H > ORIG_H) {
 		/* don't scroll in boss */
 		g_res.level.scrolling_mask &= 0;
 	}
@@ -3017,7 +3017,7 @@ static void level_update_gates() {
 				}
 			}
 			g_res.level.tilemap_w = tmp;
-			if (GAME_SCREEN_H <= 200) { /* allow scrolling in gates for non-standard height */
+			if (GAME_SCREEN_H <= ORIG_H) { /* allow scrolling in gates for non-standard height */
 				g_vars.tilemap_noscroll_flag = gate->scroll_flag;
 			}
 			g_vars.player_action_counter = 0;
@@ -3321,7 +3321,7 @@ static void level_resize() {
 			g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
 			level_init_tilemap();
 		} else if (g_sys.centred) {
-			video_copy_centred(g_res.background, 320, 200);
+			video_copy_centred(g_res.background, ORIG_W, ORIG_H);
 		} else {
 			video_copy_background();
 		}

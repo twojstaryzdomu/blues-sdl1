@@ -1083,8 +1083,8 @@ static void draw_level_panel() {
 	struct object_t *obj40 = &g_vars.objects[OBJECT_NUM_PLAYER2];
 	g_vars.vinyls_count = 0;
 	if (!g_vars.two_players_flag) {
-		screen_draw_frame(g_res.spr_frames[123], 12, 320, 0, -12);
-		screen_draw_frame(g_res.spr_frames[124], 12, 320, 0, 161);
+		screen_draw_frame(g_res.spr_frames[123], 12, ORIG_W, 0, -12);
+		screen_draw_frame(g_res.spr_frames[124], 12, ORIG_W, 0, 161);
 		if (g_vars.player == PLAYER_JAKE) {
 			screen_draw_frame(g_res.spr_frames[115], 12, 16, 24, 161);
 		} else {
@@ -1108,8 +1108,8 @@ static void draw_level_panel() {
 			}
 		}
 	} else {
-		screen_draw_frame(g_res.spr_frames[123], 12, 320, 0, -12);
-		screen_draw_frame(g_res.spr_frames[124], 12, 320, 0, 161);
+		screen_draw_frame(g_res.spr_frames[123], 12, ORIG_W, 0, -12);
+		screen_draw_frame(g_res.spr_frames[124], 12, ORIG_W, 0, 161);
 		screen_draw_frame(g_res.spr_frames[115], 12, 16, 8, 161);
 		screen_draw_frame(g_res.spr_frames[117], 12, 16, 176, 161);
 		do_level_update_panel_lifes(obj39);
@@ -1955,7 +1955,7 @@ static void do_level_update_objects() {
 				do_level_update_grabbed_object(obj);
 			}
 			if (obj->collide_flag != 0) {
-				if (obj->screen_ypos > 200) {
+				if (obj->screen_ypos > ORIG_H) {
 					obj->visible_flag = 0;
 				}
 				obj->xmaxvelocity = 60;
@@ -2085,7 +2085,7 @@ static void draw_foreground_tiles() {
 }
 
 void do_level() {
-	static const int W = 320 / 16;
+	static const int W = ORIG_W / 16;
 	for (int tile_num = 0; tile_num < 128; ++tile_num) {
 		g_vars.screen_tile_lut[tile_num] = (tile_num / W) * 640 + (tile_num % W);
 	}

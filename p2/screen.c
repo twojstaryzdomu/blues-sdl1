@@ -61,8 +61,8 @@ static void convert_planar_tile_4bpp(const uint8_t *src, uint8_t *dst, int dst_p
 
 void video_draw_string(int offset, int hspace, const char *s) {
 	offset += hspace;
-	const int y = (offset * 8) / 320 + (GAME_SCREEN_H - 200) / 2;
-	const int x = (offset * 8) % 320 + (GAME_SCREEN_W - 320) / 2;
+	const int y = (offset * 8) / ORIG_W + (GAME_SCREEN_H - ORIG_H) / 2;
+	const int x = (offset * 8) % ORIG_W + (GAME_SCREEN_W - ORIG_W) / 2;
 	uint8_t *dst = g_res.vga + y * GAME_SCREEN_W + x;
 	while (*s) {
 		uint8_t code = *s++;
@@ -79,21 +79,21 @@ void video_draw_string(int offset, int hspace, const char *s) {
 
 void video_draw_panel_number(int offset, int num) {
 	const uint8_t *fnt = g_res.allfonts + 48 * 41 + 160 * 23;
-	const int y = (offset * 8) / 320 + (GAME_SCREEN_H - 200);
-	const int x = (offset * 8) % 320 + (GAME_SCREEN_W - 320) / 2;
+	const int y = (offset * 8) / ORIG_W + (GAME_SCREEN_H - ORIG_H);
+	const int x = (offset * 8) % ORIG_W + (GAME_SCREEN_W - ORIG_W) / 2;
 	decode_planar(fnt + num * PANEL_NUMBER_W * PANEL_NUMBER_H / 2, g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, PANEL_NUMBER_W, PANEL_NUMBER_H, 0);
 }
 
 void video_draw_number(int offset, int num) {
 	const uint8_t *fnt = g_res.allfonts + 0x1C70;
-	const int y = (offset * 8) / 320;
-	const int x = (offset * 8) % 320;
+	const int y = (offset * 8) / ORIG_W;
+	const int x = (offset * 8) % ORIG_W;
 	decode_planar(fnt + num * NUMBER_W * NUMBER_H / 2, g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, NUMBER_W, NUMBER_H, 0);
 }
 
 void video_draw_character_spr(int offset, uint8_t chr) {
-	const int y = (offset * 8) / 320;
-	const int x = (offset * 8) % 320;
+	const int y = (offset * 8) / ORIG_W;
+	const int x = (offset * 8) % ORIG_W;
 	video_draw_sprite(CHARACTER_OFFSET + chr, x, y, 0, false);
 }
 
@@ -149,7 +149,7 @@ void video_clear() {
 }
 
 void video_copy_img(const uint8_t *src) {
-	decode_planar(src, g_res.background, 320, 320, 200, 0xFF);
+	decode_planar(src, g_res.background, ORIG_W, ORIG_W, ORIG_H, 0xFF);
 }
 
 void video_copy_map(const uint8_t *src) {
@@ -173,13 +173,13 @@ void video_copy_centred(uint8_t *src, int w, int h) {
 }
 
 void video_copy_background() {
-	if (GAME_SCREEN_W * GAME_SCREEN_H == 64000) {
-		memcpy(g_res.vga, g_res.background, 320 * 200);
+	if (GAME_SCREEN_W * GAME_SCREEN_H == ORIG_W * ORIG_H) {
+		memcpy(g_res.vga, g_res.background, ORIG_W * ORIG_H);
 	} else {
 		video_clear();
-		for (int y = 0; y < MIN(200, GAME_SCREEN_H); ++y) {
-			for (int x = 0; x < GAME_SCREEN_W; x += 320) {
-				memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * 320, MIN(320, GAME_SCREEN_W - x));
+		for (int y = 0; y < MIN(ORIG_H, GAME_SCREEN_H); ++y) {
+			for (int x = 0; x < GAME_SCREEN_W; x += ORIG_W) {
+				memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * ORIG_W, MIN(ORIG_W, GAME_SCREEN_W - x));
 			}
 		}
 	}
@@ -187,8 +187,8 @@ void video_copy_background() {
 
 void video_draw_panel(const uint8_t *src) {
 	const int h = TILEMAP_SCREEN_H;
-	const int x = (GAME_SCREEN_W - 320) / 2;
-	decode_planar(src, g_res.vga + h * GAME_SCREEN_W + x, GAME_SCREEN_W, 320, PANEL_H - 1, 0xFF);
+	const int x = (GAME_SCREEN_W - ORIG_W) / 2;
+	decode_planar(src, g_res.vga + h * GAME_SCREEN_W + x, GAME_SCREEN_W, ORIG_W, PANEL_H - 1, 0xFF);
 }
 
 void video_draw_tile(const uint8_t *src, int x_offset, int y_offset) {

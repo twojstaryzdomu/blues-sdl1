@@ -12,8 +12,8 @@ static int _offset_x, _offset_y;
 
 void screen_init() {
 	memset(g_res.vga, 0, GAME_SCREEN_W * GAME_SCREEN_H);
-	_offset_x = (GAME_SCREEN_W > 320) ? (GAME_SCREEN_W - 320) / 2 : 0; // center horizontally
-	_offset_y = (GAME_SCREEN_H > 200) ? (GAME_SCREEN_H - 200) : 0; // align to bottom
+	_offset_x = (GAME_SCREEN_W > ORIG_W) ? (GAME_SCREEN_W - ORIG_W) / 2 : 0; // center horizontally
+	_offset_y = (GAME_SCREEN_H > ORIG_H) ? (GAME_SCREEN_H - ORIG_H) : 0; // align to bottom
 }
 
 void screen_clear_sprites() {
@@ -136,7 +136,7 @@ void screen_copy_centred(uint8_t *src, int w, int h) {
 			uint16_t right_padding = GAME_SCREEN_W - w;
 			if (y % 2 == 0) {
 				memcpy(tmp + (y_offs + y) * GAME_SCREEN_W + x_offs,
-					src + (320 + right_padding) * y,
+					src + (ORIG_W + right_padding) * y,
 					w * 2 + right_padding);
 			}
 		}
@@ -168,7 +168,7 @@ void screen_clear(int a) {
 void screen_draw_tile(int tile, int type, int x, int y) {
 	const uint8_t *src = g_res.tiles + tile * 16;
 	if (type != 0) {
-		src += 320;
+		src += ORIG_W;
 	}
 	x = g_vars.screen_tilemap_xoffset + x * 16;
 	int tile_w = 16;
@@ -353,7 +353,7 @@ void screen_load_graphics(const uint8_t *dither_lut_sqv, const uint8_t *dither_l
 		// background tiles (Amiga) - re-arrange to match DOS .ck1/.ck2 layout
 		if (g_res.amiga_data) {
 			static const int BG_TILES_COUNT = 256;
-			static const int W = 320 / 16;
+			static const int W = ORIG_W / 16;
 			memcpy(g_res.vga, g_res.tiles, BG_TILES_COUNT * 16 * 8);
 			for (int i = 0; i < 128; ++i) {
 				const int y = (i / W);
