@@ -8,6 +8,8 @@ struct options_t g_options;
 
 static const char *DEFAULT_DATA_PATH = ".";
 
+static const char *DEFAULT_JUMP_BUTTON = "A";
+
 static const int DEFAULT_SCALE_FACTOR = 2;
 
 static const char *DEFAULT_SCALE_FILTER = 0; // nearest pixel sampling
@@ -19,7 +21,7 @@ static const char *USAGE =
 	"  --cheats=MASK     Cheats mask\n"
 	"  --startpos=XxY    Start at position (X,Y)\n"
 	"  --fullscreen      Enable fullscreen\n"
-	"  --scale=N         Graphics scaling factor (default 2)\n"
+	"  --scale=N         Graphics scaling factor (default %d)\n"
 	"  --filter=NAME     Graphics scaling filter (default 'nearest')\n"
 	"  --screensize=WxH  Graphics screen size (default %dx%d)\n"
 	"  --cga             Enable CGA colors\n"
@@ -27,11 +29,10 @@ static const char *USAGE =
 	"  --hybrid          Enable fuchsia color as in Hybrid crack\n"
 	"  --palette=NUM     Pick palette NUM for screen colors\n"
 	"  --nomap           Do not scroll map before each level\n"
-	"  --jumpbtn=[ABXY]  Select controller button for jump (default 'A')\n"
+	"  --jumpbtn=[ABXY]  Select controller button for jump (default '%s')\n"
 	"  --nosound         Disable sound\n"
 ;
 
-static const char *DEFAULT_JUMP_BUTTON = "A";
 
 static struct game_t *detect_game(const char *data_path) {
 #if 0
@@ -161,7 +162,7 @@ int main(int argc, char *argv[]) {
 			g_sys.audio = false;
 			break;
 		default:
-			fprintf(stdout, USAGE, argv[0], ORIG_W, ORIG_H);
+			fprintf(stdout, USAGE, argv[0], DEFAULT_SCALE_FACTOR, ORIG_W, ORIG_H, DEFAULT_JUMP_BUTTON);
 			return -1;
 		}
 	}
