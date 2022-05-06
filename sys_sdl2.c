@@ -629,7 +629,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_MINUS:
 		if (keydown) {
 			g_sys.palette_offset = -1;
-			g_sys.reset_palette = true;
+			g_sys.cycle_palette = true;
 			g_sys.resize_screen();
 		}
 		break;
@@ -637,7 +637,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_PLUS:
 		if (keydown) {
 			g_sys.palette_offset = 1;
-			g_sys.reset_palette = true;
+			g_sys.cycle_palette = true;
 			g_sys.resize_screen();
 		}
 		break;
@@ -661,7 +661,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_h:
 		if (keydown) {
 			_hybrid_color = !_hybrid_color;
-			g_sys.reset_palette = true;
+			g_sys.cycle_palette = true;
 			g_sys.resize_screen();
 			sprintf(_s, "Hybrid colour %s", _hybrid_color ? "on" : "off");
 			g_sys.add_message(_s);

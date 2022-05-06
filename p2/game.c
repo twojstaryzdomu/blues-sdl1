@@ -212,10 +212,10 @@ static void do_map(){
 			g_sys.set_screen_palette(palettes_tbl[pal], 0, 16, 6);
 			video_load_sprites();
 			for (uint16_t x = 1; x <= MAP_W + (GAME_SCREEN_W < MAP_W ? 0 : (GAME_SCREEN_W - MAP_W) / 2); ++x) { /* 640*200*4bpp pic */
-				if (g_sys.reset_palette) {
+				if (g_sys.cycle_palette) {
 					  g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
 					  g_sys.set_screen_palette(unique_palettes_tbl[g_vars.palette], 0, 16, 6);
-					  g_sys.reset_palette = false;
+					  g_sys.cycle_palette = false;
 				}
 				video_resize();
 				uint16_t y_offs = (GAME_SCREEN_H - ORIG_H) / 2;

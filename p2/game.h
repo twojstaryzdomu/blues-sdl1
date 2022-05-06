@@ -244,6 +244,7 @@ struct vars_t {
 	uint8_t columns_tiles_buf[256];
 
 	uint8_t palette;
+	uint8_t prev_palette;
 
 	bool slide;
 
