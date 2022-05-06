@@ -27,15 +27,11 @@ static void set_level_palette() {
 		g_vars.palette = g_options.palette ? g_options.palette : g_vars.level_num;
 	} else {
 		g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
-		sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
-		g_vars.message.timelimit = 500;
-		g_sys.add_message(g_vars.message.s);
 	}
 	const uint8_t *palette 	= !g_sys.palette_offset
 				? palettes_tbl[g_vars.palette]
 				: unique_palettes_tbl[g_vars.palette];
 	g_sys.set_screen_palette(palette, 0, 16, 6);
-	g_sys.reset_palette = 0;
 	g_sys.palette_offset = 0;
 }
 
@@ -3264,35 +3260,66 @@ static void level_update_panel() {
 	level_draw_panel();
 }
 
+
+static bool level_update_palette(const uint8_t *src_pal, const uint8_t *dst_pal, uint8_t *palette) {
+	bool changed = false;
+	++g_vars.light.palette_counter;
+	for (int i = 0; i < 16 * 3; ++i) {
+		int diff = src_pal[i] - dst_pal[i];
+		int step = g_vars.light.palette_counter;
+		if (diff < 0) {
+			diff = -diff;
+			step = -step;
+		}
+		if (diff <= g_vars.light.palette_counter) {
+			palette[i] = dst_pal[i];
+		} else {
+			palette[i] = src_pal[i] - step;
+			changed = true;
+		}
+	}
+	return changed;
+}
+
+static void level_cycle_palette() {
+	if (g_sys.cycle_palette) {
+		if (g_sys.palette_offset) {
+			g_vars.prev_palette = g_vars.palette;
+			g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
+			g_sys.palette_offset = 0;
+			g_vars.light.palette_counter = 0;
+			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
+			g_vars.message.timelimit = 2500;
+			g_sys.add_message(g_vars.message.s);
+		}
+		const uint8_t *src_pal = unique_palettes_tbl[g_vars.prev_palette];
+		const uint8_t *dst_pal = unique_palettes_tbl[g_vars.palette];
+		uint8_t palette[16 * 3];
+		if (level_update_palette(src_pal, dst_pal, palette)) {
+			g_sys.set_screen_palette(palette, 0, 16, 6);
+		} else {
+			g_sys.cycle_palette = 0;
+			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
+			g_vars.message.timelimit = 500;
+			g_sys.add_message(g_vars.message.s);
+		}
+	}
+}
+
 static void level_update_light_palette() {
 	if ((g_vars.light.palette_flag1 | g_vars.light.palette_flag2) != 0) {
-		++g_vars.light.palette_counter;
 		uint8_t palette[16 * 3];
-		const uint8_t *src_pal = palettes_tbl[g_vars.level_num];
+		const uint8_t *src_pal = palettes_tbl[g_vars.palette];
 		const uint8_t *dst_pal = light_palette_data;
-		bool changed = false;
 		if (g_vars.light.palette_flag2 != 0) {
 			SWAP(src_pal, dst_pal);
 		}
-		for (int i = 0; i < 16 * 3; ++i) {
-			int diff = src_pal[i] - dst_pal[i];
-			int step = g_vars.light.palette_counter;
-			if (diff < 0) {
-				diff = -diff;
-				step = -step;
-			}
-			if (diff <= g_vars.light.palette_counter) {
-				palette[i] = dst_pal[i];
-			} else {
-				palette[i] = src_pal[i] - step;
-				changed = true;
-			}
-		}
-		if (!changed) {
+		if (level_update_palette(src_pal, dst_pal, palette)) {
+			g_sys.set_screen_palette(palette, 0, 16, 6);
+		} else {
 			g_vars.light.palette_flag1 = 0;
 			g_vars.light.palette_flag2 = 0;
 		}
-		g_sys.set_screen_palette(palette, 0, 16, 6);
 	}
 }
 
@@ -3333,16 +3360,10 @@ static void level_resize() {
 	}
 }
 
-static void level_update_palette() {
-	if (g_sys.reset_palette) {
-		set_level_palette();
-	}
-}
-
 static void level_sync() {
 	update_input();
 	level_resize();
-	level_update_palette();
+	level_cycle_palette();
 	g_sys.update_screen(g_res.vga, 1);
 	if (!g_sys.centred && !g_vars.slide)
 		g_sys.render_clear_sprites();
