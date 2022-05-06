@@ -64,7 +64,6 @@ static uint32_t _copper_palette[COPPER_BARS_H];
 static bool _hybrid_color;
 static const char *_caption;
 static bool _fullscreen;
-static bool _hybrid_color;
 
 static int _orig_w, _orig_h;
 static bool _size_lock;
@@ -212,7 +211,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 	_sprites_cliprect.y = 0;
 	_sprites_cliprect.w = g_sys.w;
 	_sprites_cliprect.h = g_sys.h;
-	_hybrid_color = hybrid_color;
+	g_sys.hybrid_color = hybrid_color;
 }
 
 static uint32_t convert_amiga_color(uint16_t color) {
@@ -272,7 +271,7 @@ static void sdl2_set_screen_palette(const uint8_t *colors, int offset, int count
 			g = (g << shift) | (g >> (depth - shift));
 			b = (b << shift) | (b >> (depth - shift));
 		}
-		if(_hybrid_color && i < 2){
+		if(g_sys.hybrid_color && i < 2){
 			g = 0;
 		}
 		_screen_palette[offset + i] = SDL_MapRGB(_fmt, r, g, b);
@@ -506,7 +505,7 @@ static void reinit_slide() {
 }
 
 static void sdl2_resize_screen() {
-	sdl2_set_screen_size(_window_w, _window_h, _caption, _fullscreen, _hybrid_color);
+	sdl2_set_screen_size(_window_w, _window_h, _caption, _fullscreen, g_sys.hybrid_color);
 	reinit_slide();
 }
 
@@ -630,7 +629,6 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			g_sys.palette_offset = -1;
 			g_sys.cycle_palette = true;
-			g_sys.resize_screen();
 		}
 		break;
 	case SDLK_EQUALS:
@@ -638,7 +636,6 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			g_sys.palette_offset = 1;
 			g_sys.cycle_palette = true;
-			g_sys.resize_screen();
 		}
 		break;
 	case SDLK_1:
@@ -660,10 +657,9 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		break;
 	case SDLK_h:
 		if (keydown) {
-			_hybrid_color = !_hybrid_color;
+			g_sys.hybrid_color = !g_sys.hybrid_color;
 			g_sys.cycle_palette = true;
-			g_sys.resize_screen();
-			sprintf(_s, "Hybrid colour %s", _hybrid_color ? "on" : "off");
+			sprintf(_s, "Hybrid colour %s", g_sys.hybrid_color ? "on" : "off");
 			g_sys.add_message(_s);
 		}
 		break;

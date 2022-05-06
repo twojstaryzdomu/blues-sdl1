@@ -92,6 +92,7 @@ struct sys_t {
 	bool	audio;
 	bool	resize;
 	bool	cycle_palette;
+	bool	hybrid_color;
 	bool	centred;
 	int8_t	palette_offset;
 	int	w, h;
