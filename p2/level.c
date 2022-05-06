@@ -3283,7 +3283,7 @@ static bool level_update_palette(const uint8_t *src_pal, const uint8_t *dst_pal,
 
 static void level_cycle_palette() {
 	if (g_sys.cycle_palette) {
-		if (g_sys.palette_offset) {
+		if (g_sys.palette_offset || g_sys.hybrid_color) {
 			g_vars.prev_palette = g_vars.palette;
 			g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
 			g_sys.palette_offset = 0;
@@ -3295,14 +3295,13 @@ static void level_cycle_palette() {
 		const uint8_t *src_pal = unique_palettes_tbl[g_vars.prev_palette];
 		const uint8_t *dst_pal = unique_palettes_tbl[g_vars.palette];
 		uint8_t palette[16 * 3];
-		if (level_update_palette(src_pal, dst_pal, palette)) {
-			g_sys.set_screen_palette(palette, 0, 16, 6);
-		} else {
+		if (!level_update_palette(src_pal, dst_pal, palette)) {
 			g_sys.cycle_palette = 0;
 			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
 			g_vars.message.timelimit = 500;
 			g_sys.add_message(g_vars.message.s);
 		}
+		g_sys.set_screen_palette(palette, 0, 16, 6);
 	}
 }
 
