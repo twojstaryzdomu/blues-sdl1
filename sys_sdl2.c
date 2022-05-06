@@ -162,6 +162,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	_window_h = h;
 	_caption = caption;
 	_filter = filter;
+	_fullscreen = fullscreen;
 	const int screen_w = MAX(w / scale, ORIG_W);
 	const int screen_h = MAX(h / scale, ORIG_H);
 	if (screen_w * scale <= _window_w && screen_h * scale <= _window_h) {
@@ -200,11 +201,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 		_window = SDL_CreateWindow(caption, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_w, _window_h, flags);
 	} else {
 		bool is_fullscreen = SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
-		fprintf(stderr, "%s change to %s\n", is_fullscreen ? "Fullscreen" : "Window", fullscreen ? "fullscreen" : "window");
-		if (is_fullscreen != fullscreen) {
-			SDL_SetWindowFullscreen(_window, fullscreen);
-			_fullscreen = fullscreen;
-		}
+		fprintf(stderr, "%s change to %s\n", is_fullscreen ? "Fullscreen" : "Window", _fullscreen ? "fullscreen" : "window");
+		SDL_SetWindowFullscreen(_window, _fullscreen);
 		int window_w, window_h;
 		SDL_GetWindowSize(_window, &window_w, &window_h);
 		fprintf(stderr, "Existing window size: %dx%d\n", window_w, window_h);
