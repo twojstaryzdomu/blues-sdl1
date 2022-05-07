@@ -2378,7 +2378,7 @@ static void level_update_player_flying() {
 		int x_delta = (int8_t)p[4];
 		int spr_num = READ_LE_UINT16(p + 2);
 		if (spr_num >= 121) {
-			 spr_num = READ_LE_UINT16(player_flying_anim_data + g_vars.player_flying_anim_index * 2);
+			spr_num = READ_LE_UINT16(player_flying_anim_data + g_vars.player_flying_anim_index * 2);
 		}
 		if (player_spr_num & 0x8000) {
 			spr_num |= 0x8000;
