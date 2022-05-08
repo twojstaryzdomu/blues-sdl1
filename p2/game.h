@@ -32,6 +32,7 @@ extern struct options_t g_options;
 #define MAP_H 200
 
 #define UNIQUE_PALETTES 16
+#define LIGHT_PALETTE_OFFSET 12
 
 struct club_anim_t {
 	const uint8_t *anim; /* uint16_t[4] : player spr, club spr, x, y */
@@ -245,6 +246,7 @@ struct vars_t {
 
 	uint8_t palette;
 	uint8_t prev_palette;
+	bool hybrid_color_flag;
 
 	bool slide;
 
@@ -316,6 +318,7 @@ struct vars_t {
 		uint8_t palette_flag1; /* palette day time */
 		uint8_t palette_flag2; /* palette night time */
 		uint8_t palette_counter;
+		uint8_t day_palette;
 	} light;
 	struct {
 		uint32_t score;

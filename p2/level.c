@@ -22,17 +22,32 @@ static void level_player_death_animation();
 
 static const uint8_t next_level_tbl[] = { 0xFF, 0x0C, 0x0B, 0x0A, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0x0E };
 
+static const uint8_t *copy_hybrid_palette(const uint8_t *src_pal){
+	uint8_t *palette = malloc(sizeof(uint8_t) * 16 * 3);
+	memcpy(palette, src_pal, 16 * 3);
+	palette[4] = 0x05;
+	palette[5] = 0x32;
+	return (const uint8_t*) palette;
+}
+
 static void set_level_palette() {
 	if (!g_sys.palette_offset) {
 		g_vars.palette = g_options.palette ? g_options.palette : g_vars.level_num;
 	} else {
 		g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
 	}
-	const uint8_t *palette 	= !g_sys.palette_offset
+	g_vars.prev_palette = g_vars.palette;
+	const uint8_t *palette 	= !g_sys.hybrid_color
+				? !g_sys.palette_offset
 				? palettes_tbl[g_vars.palette]
-				: unique_palettes_tbl[g_vars.palette];
+				: unique_palettes_tbl[g_vars.palette]
+				: !g_sys.palette_offset
+				? copy_hybrid_palette(palettes_tbl[g_vars.palette])
+				: copy_hybrid_palette(unique_palettes_tbl[g_vars.palette]);
 	g_sys.set_screen_palette(palette, 0, 16, 6);
-	g_sys.palette_offset = 0;
+	if (g_sys.hybrid_color)
+		free((uint8_t*)palette);
+	g_vars.hybrid_color_flag = g_sys.hybrid_color;
 }
 
 static int load_level_data_get_tilemap_size(int num, const uint8_t *lev, const uint8_t *uni) {
@@ -3263,6 +3278,10 @@ static void level_update_panel() {
 static bool level_update_palette(const uint8_t *src_pal, const uint8_t *dst_pal, uint8_t *palette) {
 	bool changed = false;
 	++g_vars.light.palette_counter;
+	if (g_sys.hybrid_color)
+		dst_pal = copy_hybrid_palette(dst_pal);
+	if (g_vars.hybrid_color_flag)
+		src_pal = copy_hybrid_palette(src_pal);
 	for (int i = 0; i < 16 * 3; ++i) {
 		int diff = src_pal[i] - dst_pal[i];
 		int step = g_vars.light.palette_counter;
@@ -3277,24 +3296,36 @@ static bool level_update_palette(const uint8_t *src_pal, const uint8_t *dst_pal,
 			changed = true;
 		}
 	}
+	if (g_sys.hybrid_color)
+		free((uint8_t*)dst_pal);
+	if (g_vars.hybrid_color_flag)
+		free((uint8_t*)src_pal);
+	if (!changed) {
+		g_vars.light.palette_counter = 0;
+		if (g_vars.hybrid_color_flag != g_sys.hybrid_color)
+			print_debug(DBG_GAME, "%sabled hybrid colour\n", g_sys.hybrid_color ? "En" : "Dis");
+		g_vars.hybrid_color_flag = g_sys.hybrid_color;
+	}
 	return changed;
 }
 
 static void level_cycle_palette() {
 	if (g_sys.cycle_palette) {
-		if (g_sys.palette_offset || g_sys.hybrid_color) {
+		if (g_sys.palette_offset) {
 			g_vars.prev_palette = g_vars.palette;
 			g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
 			g_sys.palette_offset = 0;
-			g_vars.light.palette_counter = 0;
 			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
 			g_vars.message.timelimit = 2500;
 			g_sys.add_message(g_vars.message.s);
 		}
+		if (g_vars.hybrid_color_flag != g_sys.hybrid_color)
+			g_vars.prev_palette = g_vars.palette;
 		const uint8_t *src_pal = unique_palettes_tbl[g_vars.prev_palette];
 		const uint8_t *dst_pal = unique_palettes_tbl[g_vars.palette];
 		uint8_t palette[16 * 3];
 		if (!level_update_palette(src_pal, dst_pal, palette)) {
+			print_debug(DBG_GAME, "palette #%d cycled to #%d\n", g_vars.prev_palette, g_vars.palette);
 			g_sys.cycle_palette = 0;
 			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
 			g_vars.message.timelimit = 500;
@@ -3307,14 +3338,22 @@ static void level_cycle_palette() {
 static void level_update_light_palette() {
 	if ((g_vars.light.palette_flag1 | g_vars.light.palette_flag2) != 0) {
 		uint8_t palette[16 * 3];
-		const uint8_t *src_pal = palettes_tbl[g_vars.palette];
-		const uint8_t *dst_pal = light_palette_data;
-		if (g_vars.light.palette_flag2 != 0) {
-			SWAP(src_pal, dst_pal);
-		}
+		uint8_t dst_pal_offs	= g_vars.light.state
+					? LIGHT_PALETTE_OFFSET
+					: g_vars.light.day_palette - 1;
+		uint8_t src_pal_offs	= g_vars.palette;
+		const uint8_t *src_pal = unique_palettes_tbl[src_pal_offs];
+		const uint8_t *dst_pal = unique_palettes_tbl[dst_pal_offs];
 		if (level_update_palette(src_pal, dst_pal, palette)) {
 			g_sys.set_screen_palette(palette, 0, 16, 6);
 		} else {
+			if (g_vars.light.palette_flag1) {
+				g_vars.light.day_palette = g_vars.palette + 1;
+				g_vars.palette = LIGHT_PALETTE_OFFSET;
+			} else {
+				g_vars.light.day_palette = 0;
+			}
+			print_debug(DBG_GAME, "palette #%d cycled to #%d, day palette #%d\n", src_pal_offs, dst_pal_offs, g_vars.light.day_palette - 1);
 			g_vars.light.palette_flag1 = 0;
 			g_vars.light.palette_flag2 = 0;
 		}
