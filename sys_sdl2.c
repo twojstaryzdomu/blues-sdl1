@@ -295,9 +295,6 @@ static void sdl2_set_screen_palette(const uint8_t *colors, int offset, int count
 			g = (g << shift) | (g >> (depth - shift));
 			b = (b << shift) | (b >> (depth - shift));
 		}
-		if(g_sys.hybrid_color && i < 2){
-			g = 0;
-		}
 		_screen_palette[offset + i] = SDL_MapRGB(_fmt, r, g, b);
 		palette_colors[i].r = r;
 		palette_colors[i].g = g;
