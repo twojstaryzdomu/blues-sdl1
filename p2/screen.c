@@ -179,9 +179,11 @@ void video_copy_background() {
 		memcpy(g_res.vga, g_res.background, ORIG_W * ORIG_H);
 	} else {
 		video_clear();
-		for (int y = 0; y < MIN(ORIG_H, GAME_SCREEN_H); ++y) {
+		for (int y = 0; y < MAX(ORIG_H, GAME_SCREEN_H); ++y) {
 			for (int x = 0; x < GAME_SCREEN_W; x += ORIG_W) {
-				memcpy(g_res.vga + y * GAME_SCREEN_W + x, g_res.background + y * ORIG_W, MIN(ORIG_W, GAME_SCREEN_W - x));
+				memcpy(g_res.vga + y * GAME_SCREEN_W + x,
+					g_res.background + (y < ORIG_H ? y : ORIG_H - 1) * ORIG_W,
+					MIN(ORIG_W, GAME_SCREEN_W - x));
 			}
 		}
 	}
