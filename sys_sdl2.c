@@ -880,7 +880,8 @@ static int handle_event(const SDL_Event *ev) {
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			g_sys.paused = (ev->window.event == SDL_WINDOWEVENT_FOCUS_LOST);
-			SDL_PauseAudio(g_sys.paused);
+			if (g_sys.audio)
+				SDL_PauseAudio(g_sys.paused);
 			break;
 		case SDL_WINDOWEVENT_MINIMIZED:
 			fprintf(stderr, "Window minimized");
