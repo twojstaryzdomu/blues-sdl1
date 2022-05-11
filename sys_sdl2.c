@@ -181,7 +181,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 	flags |= SDL_ANYFORMAT;
 	if (_renderer)
 		SDL_FreeSurface(_renderer);
-	_renderer = SDL_SetVideoMode(screen_w, screen_h, 8, flags);
+	_renderer = SDL_SetVideoMode(screen_w, screen_h, 32, flags);
 	if(!_renderer){
 		printf("Couldn't set video mode: %s\n", SDL_GetError());
 		exit(-1);
