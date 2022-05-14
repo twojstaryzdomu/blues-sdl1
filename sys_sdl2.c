@@ -665,6 +665,11 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 			g_sys.add_message(_s);
 		}
 		break;
+	case SDLK_c:
+		if (keydown) {
+			g_sys.reset_cache_counters = true;
+		}
+		break;
 	case SDLK_d:
 		if (keydown)
 			sdl2_rescale_screen(-1);

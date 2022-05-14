@@ -251,6 +251,8 @@ struct vars_t {
 	bool slide;
 
 	bool redraw_cache;
+	uint32_t redraw_counter;
+	uint32_t cache_counter;
 
 	struct {
 		int16_t x, y;

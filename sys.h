@@ -96,6 +96,7 @@ struct sys_t {
 	bool	cycle_palette;
 	bool	hybrid_color;
 	bool	centred;
+	bool	reset_cache_counters;
 	int8_t	palette_offset;
 	int	w, h;
 };
