@@ -3436,6 +3436,8 @@ static void level_sync() {
 	update_input();
 	level_resize();
 	level_cycle_palette();
+	g_vars.redraw_cache ? ++g_vars.redraw_counter : ++g_vars.cache_counter;
+	print_debug(DBG_CACHE, "Cache %d Redraw %d Hit ratio %d%%", g_vars.cache_counter, g_vars.redraw_counter, 100 * g_vars.cache_counter / (g_vars.cache_counter + g_vars.redraw_counter));
 	g_sys.update_screen_cached(g_res.vga, 1, !g_vars.redraw_cache);
 	g_vars.redraw_cache = false;
 	if (!g_sys.centred && !g_vars.slide)

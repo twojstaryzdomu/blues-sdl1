@@ -658,6 +658,11 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.add_message(_s);
 		}
 		break;
+	case SDLK_c:
+		if (keydown) {
+			g_sys.reset_cache_counters = true;
+		}
+		break;
 	case SDLK_h:
 		if (keydown) {
 			g_sys.hybrid_color = !g_sys.hybrid_color;
