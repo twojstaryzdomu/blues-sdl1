@@ -61,7 +61,6 @@ static uint32_t _screen_palette[256];
 static uint32_t *_screen_buffer;
 static int _copper_color_key;
 static uint32_t _copper_palette[COPPER_BARS_H];
-static bool _hybrid_color;
 static const char *_caption;
 static bool _fullscreen;
 
