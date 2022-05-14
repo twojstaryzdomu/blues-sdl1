@@ -506,28 +506,30 @@ static void sdl2_resize_screen() {
 	reinit_slide();
 }
 
-static void sdl2_update_screen(const uint8_t *p, int present) {
-	if (_copper_color_key != -1) {
-		for (int j = 0; j < g_sys.h; ++j) {
-			if (j / 2 < COPPER_BARS_H) {
-				const uint32_t line_color = _copper_palette[j / 2];
-				for (int i = 0; i < g_sys.w; ++i) {
-					_screen_buffer[j * g_sys.w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
+static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_redraw) {
+	if (!cache_redraw) {
+		if (_copper_color_key != -1) {
+			for (int j = 0; j < g_sys.h; ++j) {
+				if (j / 2 < COPPER_BARS_H) {
+					const uint32_t line_color = _copper_palette[j / 2];
+					for (int i = 0; i < g_sys.w; ++i) {
+						_screen_buffer[j * g_sys.w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
+					}
+				} else {
+					for (int i = 0; i < g_sys.w; ++i) {
+						_screen_buffer[j * g_sys.w + i] = _screen_palette[p[i]];
+					}
 				}
-			} else {
-				for (int i = 0; i < g_sys.w; ++i) {
-					_screen_buffer[j * g_sys.w + i] = _screen_palette[p[i]];
-				}
+				p += g_sys.w;
 			}
-			p += g_sys.w;
+		} else {
+			for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
+				_screen_buffer[i] = _screen_palette[p[i]];
+			}
 		}
-	} else {
-		for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
-			_screen_buffer[i] = _screen_palette[p[i]];
-		}
+		SDL_FreeSurface(_texture);
+		_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w, g_sys.h, 32, g_sys.w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
 	}
-	SDL_FreeSurface(_texture);
-	_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w, g_sys.h, 32, g_sys.w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
 	if (present) {
 		SDL_Rect *src, *dst;
 		SDL_Rect r={_shake_dx, _shake_dy, g_sys.w, g_sys.h};
@@ -549,6 +551,10 @@ static void sdl2_update_screen(const uint8_t *p, int present) {
 		if (_slide.br)
 			update_slide();
 	}
+}
+
+static void sdl2_update_screen(const uint8_t *p, int present) {
+	sdl2_update_screen_cached(p, present, false);
 }
 
 static void sdl2_shake_screen(int dx, int dy) {
@@ -988,6 +994,7 @@ struct sys_t g_sys = {
 	.clear_slide = clear_slide,
 	.resize_screen = sdl2_resize_screen,
 	.update_screen = sdl2_update_screen,
+	.update_screen_cached = sdl2_update_screen_cached,
 	.shake_screen = sdl2_shake_screen,
 	.transition_screen = sdl2_transition_screen,
 	.process_events = sdl2_process_events,
