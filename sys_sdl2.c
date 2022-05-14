@@ -662,6 +662,13 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.reset_cache_counters = true;
 		}
 		break;
+	case SDLK_g:
+		if (keydown) {
+			g_sys.animate_tiles = !g_sys.animate_tiles;
+			sprintf(_s, "Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
+			g_sys.add_message(_s);
+		}
+		break;
 	case SDLK_h:
 		if (keydown) {
 			g_sys.hybrid_color = !g_sys.hybrid_color;

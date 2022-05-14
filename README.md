@@ -61,6 +61,7 @@ In-game palette cycling is only available in Prehistorik 2.
 |:-----------:|:-------------------------------------|
 |      A      | Toggle audio                         |
 |      C      | Reset cache stats (in '--debug=128') |
+|      G      | Toggle animated tiles                |
 |      H      | Toggle Hybrid crack palette bug      |
 |      J      | Configure jump button                |
 |      O      | Restore original screen size         |
@@ -90,6 +91,7 @@ Usage: blues [OPTIONS]...
   --nomap           Do not scroll map before each level
   --jumpbtn=NUM     Select button NUM for jump (default 0)
   --nosound         Disable sound
+  --noanimtiles     Disable animated tiles
 ```
 
 ## Downloads

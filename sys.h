@@ -94,6 +94,7 @@ struct sys_t {
 	bool	resize;
 	bool	cycle_palette;
 	bool	hybrid_color;
+	bool	animate_tiles;
 	bool	centred;
 	bool	reset_cache_counters;
 	int8_t	palette_offset;
