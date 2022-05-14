@@ -31,6 +31,7 @@ static const char *USAGE =
 	"  --nomap           Do not scroll map before each level\n"
 	"  --jumpbtn=[ABXY]  Select controller button for jump (default '%s')\n"
 	"  --nosound         Disable sound\n"
+	"  --noanimtiles     Disable animated tiles\n"
 ;
 
 
@@ -70,6 +71,7 @@ int main(int argc, char *argv[]) {
 	g_options.dos_scrolling = false;
 	g_options.hybrid_color = false;
 	g_options.show_map = true;
+	g_options.animate_tiles = true;
 	g_sys.audio = true;
 	const char *data_path = DEFAULT_DATA_PATH;
 	int scale_factor = DEFAULT_SCALE_FACTOR;
@@ -100,6 +102,7 @@ int main(int argc, char *argv[]) {
 			{ "nomap",      no_argument,       0, 14 },
 			{ "jumpbtn",    required_argument, 0, 15 },
 			{ "nosound",    no_argument      , 0, 16 },
+			{ "noanimtiles",no_argument      , 0, 17 },
 			{ 0, 0, 0, 0 },
 		};
 		int index;
@@ -160,6 +163,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 16:
 			g_sys.audio = false;
+			break;
+		case 17:
+			g_options.animate_tiles = false;
 			break;
 		default:
 			fprintf(stdout, USAGE, argv[0], DEFAULT_SCALE_FACTOR, ORIG_W, ORIG_H, DEFAULT_JUMP_BUTTON);

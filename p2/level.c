@@ -339,6 +339,8 @@ static void level_update_tilemap() {
 		} else if (g_vars.level_animated_tiles_current_tbl == g_vars.tile_tbl3) {
 			g_vars.level_animated_tiles_current_tbl = g_vars.tile_tbl1;
 		}
+		if (g_vars.animate_tiles)
+			g_vars.redraw_cache = true;
 	} else {
 		if (!_redraw_tilemap) {
 			return;

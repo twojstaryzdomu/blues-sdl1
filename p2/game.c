@@ -24,6 +24,8 @@ void update_input() {
 		g_vars.cache_counter = 0;
 		g_sys.reset_cache_counters = false;
 	}
+	if (g_sys.animate_tiles != g_vars.animate_tiles)
+		g_vars.animate_tiles = g_sys.animate_tiles;
 }
 
 static void wait_input(int timeout) {
@@ -421,6 +423,7 @@ static void game_run(const char *data_path) {
 	sound_init();
 	video_convert_tiles(g_res.uniondat, g_res.unionlen);
 	g_vars.level_num = g_options.start_level;
+	g_vars.animate_tiles = g_options.animate_tiles;
 	do_programmed_in_1992_screen();
 	if (!g_sys.input.space && !g_sys.input.quit) {
 		do_titus_screen();

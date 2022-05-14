@@ -241,6 +241,7 @@ struct vars_t {
 	uint8_t tile_tbl2[256]; /* animated tile state 2 */
 	uint8_t tile_tbl3[256]; /* animated tile state 3 */
 	uint8_t animated_tile_flag_tbl[256]; /* 1 if tile is animated */
+	bool animate_tiles;
 
 	uint8_t columns_tiles_buf[256];
 
