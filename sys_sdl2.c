@@ -904,9 +904,7 @@ static void render_load_sprites(int spr_type, int count, const struct sys_rect_t
 	SDL_SetColors(surface, _palette->colors, 0, 256);
 	SDL_SetColorKey(surface, SDL_SRCCOLORKEY | SDL_RLEACCEL, color_key);
 	SDL_LockSurface(surface);
-	for (int y = 0; y < h; ++y) {
-		memcpy(((uint8_t *)surface->pixels) + y * surface->pitch, data + y * w, w);
-	}
+	memcpy(surface->pixels, data, w * h);
 	SDL_UnlockSurface(surface);
 	sheet->texture = SDL_DisplayFormatAlpha(surface);
 	if (update_pal) { /* update texture on palette change */
