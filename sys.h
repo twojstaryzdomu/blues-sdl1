@@ -92,6 +92,7 @@ struct sys_t {
 	bool	paused;
 	bool	audio;
 	bool	resize;
+	bool	redraw_cache;
 	bool	cycle_palette;
 	bool	hybrid_color;
 	bool	animate_tiles;

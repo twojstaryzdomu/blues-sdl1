@@ -68,6 +68,7 @@ static int _orig_w, _orig_h;
 static bool _size_lock;
 static bool _orig_fullscreen;
 static bool _orig_color;
+static bool _print_palette;
 
 static char _s[MESSAGE_MAX];
 
@@ -505,6 +506,35 @@ static void sdl2_resize_screen() {
 	reinit_slide();
 }
 
+static void sdl2_print_palette() {
+	if (!_print_palette)
+		return;
+	int x_scale = 2;
+	int y_scale = 2;
+	int x_ncolors = 16;
+	int y_ncolors = 16;
+	for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
+		/*
+		 *  Breakdown:
+		 *  p = pitch = g_sys.w
+		 *  i         -> (x,y) = index ; i++       -> (x,y) = index++
+		 *  0         -> (0,0) =       ; 1         -> (1,0) =
+		 *  0 + p * 1 -> (1,0) =       ; 1 + p * 1 -> (1,1) =
+		 *  0 + p * 2 -> (2,0) =       ; 1 + p * 2 -> (2,1) =
+		 *  |       |                    |       |
+		 *  |       \--> i / p           |       \--> i / p
+		 *  \----------> i % p           \----------> i % p
+		 *
+		 */
+		int x = i % g_sys.w;
+		int y = i / g_sys.w;
+		if (x < x_ncolors * x_scale && y < y_ncolors * y_scale) {
+			int index = x / x_scale + y / y_scale * x_ncolors;
+			_screen_buffer[i] = _screen_palette[index];
+		}
+	}
+}
+
 static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_redraw) {
 	if (!cache_redraw) {
 		if (_copper_color_key != -1) {
@@ -525,6 +555,7 @@ static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_
 			for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
 				_screen_buffer[i] = _screen_palette[p[i]];
 			}
+			sdl2_print_palette();
 		}
 		SDL_FreeSurface(_texture);
 		_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w, g_sys.h, 32, g_sys.w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
@@ -660,6 +691,12 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_c:
 		if (keydown) {
 			g_sys.reset_cache_counters = true;
+		}
+		break;
+	case SDLK_e:
+		if (keydown) {
+			g_sys.redraw_cache = true;
+			_print_palette = !_print_palette;
 		}
 		break;
 	case SDLK_g:
