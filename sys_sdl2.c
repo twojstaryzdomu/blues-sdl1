@@ -51,6 +51,7 @@ static int _fullscreen_w, _fullscreen_h;
 #endif
 static int _shake_dx, _shake_dy;
 static int _centred_x_offset, _centred_y_offset;
+static int _palette_x_offset, _palette_y_offset;
 static uint32_t flags, rmask, gmask, bmask, amask;
 static SDL_Surface *_renderer;
 static SDL_Surface *_texture;
@@ -530,7 +531,7 @@ static void sdl2_print_palette() {
 		int y = i / g_sys.w;
 		if (x < x_ncolors * x_scale && y < y_ncolors * y_scale) {
 			int index = x / x_scale + y / y_scale * x_ncolors;
-			_screen_buffer[i] = _screen_palette[index];
+			_screen_buffer[i + _palette_x_offset + _palette_y_offset * g_sys.w] = _screen_palette[index];
 		}
 	}
 }
@@ -596,28 +597,56 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	switch (keysym->sym) {
 	case SDLK_LEFT:
 		if (keydown) {
-			input->direction |= INPUT_DIRECTION_LEFT;
+			switch(keysym->mod) {
+			case KMOD_LALT:
+				--_palette_x_offset;
+				g_sys.redraw_cache = true;
+				break;
+			default:
+				input->direction |= INPUT_DIRECTION_LEFT;
+			}
 		} else {
 			input->direction &= ~INPUT_DIRECTION_LEFT;
 		}
 		break;
 	case SDLK_RIGHT:
 		if (keydown) {
-			input->direction |= INPUT_DIRECTION_RIGHT;
+			switch(keysym->mod) {
+			case KMOD_LALT:
+				++_palette_x_offset;
+				g_sys.redraw_cache = true;
+				break;
+			default:
+				input->direction |= INPUT_DIRECTION_RIGHT;
+			}
 		} else {
 			input->direction &= ~INPUT_DIRECTION_RIGHT;
 		}
 		break;
 	case SDLK_UP:
 		if (keydown) {
-			input->direction |= INPUT_DIRECTION_UP;
+			switch(keysym->mod) {
+			case KMOD_LALT:
+				--_palette_y_offset;
+				g_sys.redraw_cache = true;
+				break;
+			default:
+				input->direction |= INPUT_DIRECTION_UP;
+			}
 		} else {
 			input->direction &= ~INPUT_DIRECTION_UP;
 		}
 		break;
 	case SDLK_DOWN:
 		if (keydown) {
-			input->direction |= INPUT_DIRECTION_DOWN;
+			switch(keysym->mod) {
+			case KMOD_LALT:
+				++_palette_y_offset;
+				g_sys.redraw_cache = true;
+				break;
+			default:
+				input->direction |= INPUT_DIRECTION_DOWN;
+			}
 		} else {
 			input->direction &= ~INPUT_DIRECTION_DOWN;
 		}
