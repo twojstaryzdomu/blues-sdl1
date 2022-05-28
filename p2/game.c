@@ -48,9 +48,9 @@ static void do_programmed_in_1992_screen() {
 	}
 	video_clear();
 	g_sys.set_screen_palette(credits_palette_data, 0, 16, 6);
-	int offset = 0x960;
 	do {
 		video_resize();
+		int offset = 0x960;
 		video_draw_string(offset, 5, "YEAAA > > >");
 		char str[64];
 		snprintf(str, sizeof(str), "MY GAME IS STILL WORKING IN %04d <<", 1900 + t->tm_year);
