@@ -56,7 +56,7 @@ struct sys_t {
 	struct input_t	input;
 	int	(*init)();
 	void	(*fini)();
-	void	(*set_screen_size)(int w, int h, const char *caption, bool fullscreen, bool hybrid_color);
+	void	(*set_screen_size)(int w, int h, const char *caption, int scale, bool fullscreen, bool hybrid_color);
 	void	(*set_screen_palette)(const uint8_t *colors, int offset, int count, int depth);
 	void	(*set_palette_amiga)(const uint16_t *colors, int offset);
 	void	(*set_copper_bars)(const uint16_t *data);
@@ -67,7 +67,7 @@ struct sys_t {
 	void	(*update_screen)(const uint8_t *p, int present);
 	void	(*update_screen_cached)(const uint8_t *p, int present, bool cache_redraw);
 	void	(*shake_screen)(int dx, int dy);
-	void	(*transition_screen)(const struct sys_rect_t *s, enum sys_transition_e type, bool open);
+	void	(*transition_screen)(struct sys_rect_t *s, enum sys_transition_e type, bool open);
 	void	(*process_events)();
 	void	(*sleep)(int duration);
 	uint32_t	(*get_timestamp)();

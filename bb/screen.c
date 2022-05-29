@@ -318,7 +318,7 @@ static void decode_graphics(int spr_type, int start, int end, const uint8_t *dit
 		assert(max_w <= MAX_SPRITESHEET_W);
 		assert(current_y + max_h <= MAX_SPRITESHEET_H);
 		g_sys.render_unload_sprites(spr_type);
-		g_sys.render_load_sprites(spr_type, end - start, r, data, MAX_SPRITESHEET_W, current_y + max_h, color_key, false);
+		g_sys.render_load_sprites(spr_type, end - start, r, data, MAX_SPRITESHEET_W, current_y + max_h, color_key, true);
 		free(data);
 	}
 }
@@ -347,7 +347,7 @@ void screen_load_graphics(const uint8_t *dither_lut_sqv, const uint8_t *dither_l
 				dither_graphics(data, FG_TILE_W * g_res.avt_count, FG_TILE_W * g_res.avt_count, FG_TILE_H, dither_lut_avt, color_key);
 			}
 			g_sys.render_unload_sprites(RENDER_SPR_FG);
-			g_sys.render_load_sprites(RENDER_SPR_FG, g_res.avt_count, r, data, g_res.avt_count * FG_TILE_W, FG_TILE_H, color_key, false);
+			g_sys.render_load_sprites(RENDER_SPR_FG, g_res.avt_count, r, data, g_res.avt_count * FG_TILE_W, FG_TILE_H, color_key, true);
 			free(data);
 		}
 		// background tiles (Amiga) - re-arrange to match DOS .ck1/.ck2 layout

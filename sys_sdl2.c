@@ -13,6 +13,7 @@ static const int FADE_STEPS = 16;
 
 struct spritesheet_t {
 	int count;
+	int scale;
 	SDL_Rect *r;
 	SDL_Surface *surface;
 	SDL_Surface *texture;
@@ -63,9 +64,11 @@ static uint32_t *_screen_buffer;
 static int _copper_color_key;
 static uint32_t _copper_palette[COPPER_BARS_H];
 static const char *_caption;
+static int8_t _scale;
 static bool _fullscreen;
 
 static int _orig_w, _orig_h;
+static int8_t _orig_scale;
 static bool _size_lock;
 static bool _orig_fullscreen;
 static bool _orig_color;
@@ -94,7 +97,6 @@ static void x11_set_fullscreen_size(int *w, int *h) {
 	XRRFreeScreenResources(screens);
 }
 #endif
-
 
 static int sdl2_init() {
 	print_debug(DBG_SYSTEM, "Byte order is %s endian", SDL_BYTEORDER == SDL_BIG_ENDIAN ? "big" : "little");
@@ -156,23 +158,35 @@ static void sdl2_fini() {
 	SDL_Quit();
 }
 
-static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscreen, bool hybrid_color) {
+static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, bool fullscreen, bool hybrid_color) {
+	_window_w = w;
+	_window_h = h;
 	_caption = caption;
 	_fullscreen = fullscreen;
-	int screen_w = MAX(w, ORIG_W);
-	int screen_h = MAX(h, ORIG_H);
+	const int screen_w = MAX(w / scale, ORIG_W);
+	const int screen_h = MAX(h / scale, ORIG_H);
+	if (screen_w * scale <= _window_w && screen_h * scale <= _window_h) {
+		_scale = MAX(scale, 1);
+	} else {
+		_scale = MAX(_scale - 1, 1);
+		print_warning("Unable to fit %dx scaled %dx%d screen within %dx%d window bounds", scale, screen_w, screen_h, _window_w, _window_h, _scale);
+		sprintf(_s, "Unable to scale to %d", scale);
+		g_sys.add_message(_s);
+		return; // refuse to resize when not possible to fit window within bounds
+	}
 	if (!_size_lock) {
 		g_sys.w = screen_w;
 		g_sys.h = screen_h;
 	}
-	_centred_x_offset = (g_sys.w - ORIG_W) / 2;
-	_centred_y_offset = (g_sys.h - ORIG_H) / 2;
+	_centred_x_offset = (g_sys.w - ORIG_W) / 2 * _scale;
+	_centred_y_offset = (g_sys.h - ORIG_H) / 2 * _scale;
 	if (!_orig_w) {
 		_orig_w = screen_w;
 		_orig_h = screen_h;
+		_orig_scale = scale;
 		_orig_fullscreen = fullscreen;
 		_orig_color = hybrid_color;
-		fprintf(stderr, "Original window size: %dx%d Fullscreen: %s Hybrid colour: %s\n", _orig_w, _orig_h, _orig_fullscreen ? "on" : "off", _orig_color ? "on" : "off");
+		fprintf(stderr, "Original window size: %dx%d, scale %d, fullscreen: %s, hybrid colour: %s\n", _orig_w, _orig_h, _orig_scale, _orig_fullscreen ? "on" : "off", _orig_color ? "on" : "off");
 	}
 	flags = fullscreen ? SDL_FULLSCREEN : 0;
 	flags |= SDL_HWPALETTE;
@@ -182,7 +196,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 	flags |= SDL_ANYFORMAT;
 	if (_renderer)
 		SDL_FreeSurface(_renderer);
-	_renderer = SDL_SetVideoMode(screen_w, screen_h, 32, flags);
+	_renderer = SDL_SetVideoMode(_window_w, _window_h, 32, flags);
 	if(!_renderer){
 		printf("Couldn't set video mode: %s\n", SDL_GetError());
 		exit(-1);
@@ -190,12 +204,12 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 	SDL_WM_SetCaption(caption, 0);
 	fprintf(stderr, "Size: %dx%d", g_sys.w, g_sys.h);
 	if (g_sys.w != _window_w && g_sys.h != _window_h)
-		fprintf(stderr, " Window: %dx%d", screen_w, screen_w);
+		fprintf(stderr, " Window: %dx%d", _window_w, _window_h);
 	fprintf(stderr, "\n");
 	print_debug(DBG_SYSTEM, "set_screen_size %d,%d", g_sys.w, g_sys.h);
 	if (_screen_buffer)
 		free(_screen_buffer);
-	_screen_buffer = (uint32_t *)calloc(g_sys.w * g_sys.h, sizeof(uint32_t));
+	_screen_buffer = (uint32_t *)calloc(g_sys.w * _scale * g_sys.h * _scale, sizeof(uint32_t));
 	if (!_screen_buffer) {
 		print_error("Failed to allocate screen buffer");
 	}
@@ -210,8 +224,8 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, bool fullscr
 	}
 	_sprites_cliprect.x = 0;
 	_sprites_cliprect.y = 0;
-	_sprites_cliprect.w = g_sys.w;
-	_sprites_cliprect.h = g_sys.h;
+	_sprites_cliprect.w = g_sys.w * _scale;
+	_sprites_cliprect.h = g_sys.h * _scale;
 	g_sys.hybrid_color = hybrid_color;
 }
 
@@ -260,6 +274,67 @@ static void sdl2_set_copper_bars(const uint16_t *data) {
 	}
 }
 
+static uint8_t *sdl2_rescale_pixels(const uint8_t *p, int w, int h, int pitch, uint8_t scale) {
+	print_debug(DBG_SYSTEM, "sdl2_rescale: rescaling to %d w = %d, h = %d, pitch = %d", scale, w, h, pitch);
+	int buffer_size = w * scale * h * scale;
+	uint8_t *buffer = malloc(buffer_size * sizeof(uint8_t));
+	if (scale == 1)
+		return memcpy(buffer, p, w * h * sizeof(uint8_t));
+	for (int i = 0; i < w * scale * h * scale; ++i) {
+		uint8_t x_scale = scale;
+		uint8_t y_scale = scale;
+		int x = i % (pitch * scale);
+		int y = i / (pitch * scale);
+		int index	= (scale > 1)
+				? x / x_scale + y / y_scale * w
+				: i;
+		if (index < buffer_size) {
+			buffer[i] = p[index];
+		} else {
+			print_debug(DBG_SYSTEM, "sdl2_rescale: index %d exceeded buffer size %d for w = %d, h = %d, pitch = %d", index, i, scale, w, h, pitch);
+		}
+	}
+	return buffer;
+}
+
+static SDL_Surface *sdl2_rescale_surface(SDL_Surface *surface, int scale) {
+	SDL_PixelFormat *fmt = surface->format;
+	uint8_t *pixels = sdl2_rescale_pixels(surface->pixels, surface->w, surface->h, surface->pitch, scale);
+	SDL_Surface *temp = SDL_CreateRGBSurfaceFrom(pixels, surface->w * scale, surface->h * scale, fmt->BitsPerPixel * fmt->BytesPerPixel, surface->w * scale, fmt->Rmask, fmt->Bmask, fmt->Gmask, fmt->Amask);
+	SDL_SetColors(temp, fmt->palette->colors, 0, fmt->palette->ncolors);
+	SDL_SetColorKey(temp, surface->flags, fmt->colorkey);
+	SDL_Surface *rescaled = SDL_DisplayFormatAlpha(temp);
+	SDL_FreeSurface(temp);
+	free(pixels);
+	return rescaled;
+}
+
+static void sdl2_rescale_spritesheets(int scale) {
+	for (int i = 0; i < ARRAYSIZE(_spritesheets); ++i) {
+		struct spritesheet_t *sheet = &_spritesheets[i];
+		if (sheet->scale == scale) {
+			print_debug(DBG_SYSTEM, "Spritesheet %d already at scale %d", i, scale);
+			continue;
+		}
+		print_debug(DBG_SYSTEM, "Scaling spritesheet %d by %d", i, scale);
+		if (sheet->surface) {
+			if (sheet->texture)
+				SDL_FreeSurface(sheet->texture);
+			sheet->texture = sdl2_rescale_surface(sheet->surface, scale);
+			sheet->scale = _scale;
+		} else {
+			print_debug(DBG_SYSTEM, "No surface found for rescaling in spritesheet %d", i);
+		}
+		for (int s = 0; s < MAX_SPRITES; ++s) {
+			if (_flipped_cache[i][s]) {
+				print_debug(DBG_SYSTEM, "Freeing %d", s);
+				SDL_FreeSurface(_flipped_cache[i][s]);
+				_flipped_cache[i][s] = NULL;
+			}
+		}
+	}
+}
+
 static void sdl2_set_screen_palette(const uint8_t *colors, int offset, int count, int depth) {
 	SDL_Color *palette_colors = &_palette->colors[offset];
 	const int shift = 8 - depth;
@@ -282,9 +357,13 @@ static void sdl2_set_screen_palette(const uint8_t *colors, int offset, int count
 		print_debug(DBG_SYSTEM, "Setting palette for spritesheet %d", i);
 		struct spritesheet_t *sheet = &_spritesheets[i];
 		if (sheet->surface) {
-			SDL_FreeSurface(sheet->texture);
 			SDL_SetColors(sheet->surface, _palette->colors, 0, 256);
-			sheet->texture = SDL_DisplayFormatAlpha(sheet->surface);
+			if (sheet->texture)
+				SDL_FreeSurface(sheet->texture);
+			sheet->texture 	= (_scale > 1)
+					? sdl2_rescale_surface(sheet->surface, _scale)
+					: SDL_DisplayFormatAlpha(sheet->surface);
+			sheet->scale = _scale;
 		} else {
 			print_debug(DBG_SYSTEM, "No surface found for palette %d", i);
 		}
@@ -312,7 +391,7 @@ static void sdl2_update_sprites_screen() {
 	if (!g_sys.centred) {
 		SDL_SetClipRect(_renderer, !_slide.c? &_sprites_cliprect : _slide.c);
 	} else {
-		SDL_Rect c = { .x = _centred_x_offset, .y = _centred_y_offset, .w = ORIG_W, .h = ORIG_H };
+		SDL_Rect c = { .x = _centred_x_offset, .y = _centred_y_offset, .w = ORIG_W * _scale, .h = ORIG_H * _scale };
 		SDL_SetClipRect(_renderer, &c);
 	}
 	for (int i = 0; i < _sprites_count; ++i) {
@@ -326,6 +405,12 @@ static void sdl2_update_sprites_screen() {
 		r.y = spr->y + _shake_dy;
 		r.w = sheet->r[spr->num].w;
 		r.h = sheet->r[spr->num].h;
+		if (_scale > 1) {
+			r.y *= _scale;
+			r.x *= _scale;
+			r.w *= _scale;
+			r.h *= _scale;
+		}
 		if (_slide.br) {
 			r.x += _slide.br->x - _centred_x_offset;
 			r.y += _slide.br->y - _centred_y_offset;
@@ -335,10 +420,11 @@ static void sdl2_update_sprites_screen() {
 			r.y += _centred_y_offset;
 		}
 		SDL_Rect t;
-		t.x = sheet->r[spr->num].x;
-		t.w = sheet->r[spr->num].w;
-		t.h = sheet->r[spr->num].h;
-		t.y = sheet->r[spr->num].y;
+		t.x = sheet->r[spr->num].x * _scale;
+		t.w = sheet->r[spr->num].w * _scale;
+		t.h = sheet->r[spr->num].h * _scale;
+		t.y = sheet->r[spr->num].y * _scale;
+		print_debug(DBG_SYSTEM, "rendering spr %d at %d,%d-%d,%d,size=%d,%d", spr->num, t.x, t.y, t.x + t.w, t.y + t.h, t.w, t.h);
 		if (spr->xflip) {
 			if (_flipped_cache[spr->sheet][spr->num]) {
 				print_debug(DBG_SYSTEM, "Cache hit for sprite %d from sheet %d", spr->num, spr->sheet);
@@ -358,7 +444,7 @@ static void sdl2_update_sprites_screen() {
 
 static void fade_palette_helper(int in) {
 	int component = 0;
-	SDL_Surface* surface = SDL_CreateRGBSurface(0, g_sys.w, g_sys.h, 32, rmask, gmask, bmask, amask);
+	SDL_Surface* surface = SDL_CreateRGBSurface(0, g_sys.w * _scale, g_sys.h * _scale, 32, rmask, gmask, bmask, amask);
 	for (int i = 0; i <= FADE_STEPS; ++i) {
 		int alpha = 255 * i / FADE_STEPS;
 		if (in) {
@@ -391,7 +477,9 @@ static void sdl2_fade_out_palette() {
 	}
 }
 
-static void sdl2_transition_screen(const struct sys_rect_t *s, enum sys_transition_e type, bool open) {
+static void sdl2_transition_screen(struct sys_rect_t *s, enum sys_transition_e type, bool open) {
+	s->w *= _scale;
+	s->h *= _scale;
 	const int step_w = s->w / (FADE_STEPS + 1);
 	const int step_h = s->h / (FADE_STEPS + 1) * s->w / s->h;
 	print_debug(DBG_SYSTEM, "sdl2_transition_screen: FADE_STEPS = %d; s->w = %d, s->h = %d, step_w = %d; step_h = %d", FADE_STEPS, s->w, s->h, step_w, step_h);
@@ -443,12 +531,12 @@ static void init_slide(){
 	if (!_slide.br) {
 		enum sys_slide_e type	= g_sys.slide_type;
 		struct sys_rect_t *s	= &g_sys.slide_rect;
-		SDL_Rect *f		= set_rect(0, s->y ? s->y : g_sys.h - s->h, g_sys.w, s->h);
-		SDL_Rect *b		= set_rect(0, 0, ORIG_W, ORIG_H);
+		SDL_Rect *f		= set_rect(0, s->y ? s->y : g_sys.h * _scale - s->h * _scale, g_sys.w * _scale, s->h * _scale);
+		SDL_Rect *b		= set_rect(0, 0, ORIG_W * _scale, ORIG_H * _scale);
 		SDL_Rect *br		= set_rect(b->x, b->y, b->w, b->h);
 		switch (type) {
 		case SLIDE_BOTTOM:
-			br->y		= g_sys.h;
+			br->y		= g_sys.h * _scale;
 			_slide.end	= g_sys.slide_end
 					? g_sys.slide_end
 					: b->y > _centred_y_offset
@@ -461,7 +549,7 @@ static void init_slide(){
 				br->x	+= _centred_x_offset;
 			}
 		}
-		SDL_Rect *c		= set_rect(_centred_x_offset, 0, ORIG_W, f->y);
+		SDL_Rect *c		= set_rect(_centred_x_offset, 0, ORIG_W * _scale, f->y * _scale);
 		_slide.b		= b;
 		_slide.br		= br;
 		_slide.c		= c;
@@ -503,18 +591,29 @@ static void reinit_slide() {
 }
 
 static void sdl2_resize_screen() {
-	sdl2_set_screen_size(_window_w, _window_h, _caption, _fullscreen, g_sys.hybrid_color);
+	sdl2_set_screen_size(_window_w, _window_h, _caption, _scale, _fullscreen, g_sys.hybrid_color);
+	sdl2_rescale_spritesheets(_scale);
 	reinit_slide();
+}
+
+static void sdl2_rescale_screen(int n) {
+	if (_scale > 1 || n > 0) {
+		fprintf(stderr, "Scale %d, ", _scale);
+		_scale += n;
+		fprintf(stderr, "%screasing to %d\n", n > 0 ? "in" : "de", abs(_scale));
+		g_sys.resize = true;
+		g_sys.resize_screen();
+	}
 }
 
 static void sdl2_print_palette() {
 	if (!_print_palette)
 		return;
-	int x_scale = 2;
-	int y_scale = 2;
+	int x_scale = 2 * _scale;
+	int y_scale = 2 * _scale;
 	int x_ncolors = 16;
 	int y_ncolors = 16;
-	for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
+	for (int i = 0; i < g_sys.w * _scale * g_sys.h * _scale; ++i) {
 		/*
 		 *  Breakdown:
 		 *  p = pitch = g_sys.w
@@ -527,8 +626,8 @@ static void sdl2_print_palette() {
 		 *  \----------> i % p           \----------> i % p
 		 *
 		 */
-		int x = i % g_sys.w;
-		int y = i / g_sys.w;
+		int x = i % (g_sys.w * _scale);
+		int y = i / (g_sys.w * _scale);
 		if (x < x_ncolors * x_scale && y < y_ncolors * y_scale) {
 			int index = x / x_scale + y / y_scale * x_ncolors;
 			_screen_buffer[i + _palette_x_offset + _palette_y_offset * g_sys.w] = _screen_palette[index];
@@ -537,33 +636,41 @@ static void sdl2_print_palette() {
 }
 
 static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_redraw) {
-	if (!cache_redraw) {
+	if (!cache_redraw || g_sys.resize) {
+		uint8_t *r	= (_scale > 1)
+				? sdl2_rescale_pixels(p, g_sys.w, g_sys.h, g_sys.w, _scale)
+				: (uint8_t*)p;
+		uint8_t *q	= r;
 		if (_copper_color_key != -1) {
-			for (int j = 0; j < g_sys.h; ++j) {
+			for (int j = 0; j < g_sys.h * _scale; ++j) {
 				if (j / 2 < COPPER_BARS_H) {
 					const uint32_t line_color = _copper_palette[j / 2];
-					for (int i = 0; i < g_sys.w; ++i) {
-						_screen_buffer[j * g_sys.w + i] = (p[i] == _copper_color_key) ? line_color : _screen_palette[p[i]];
+					for (int i = 0; i < g_sys.w * _scale; ++i) {
+						_screen_buffer[j * g_sys.w * _scale + i]	= (r[i] == _copper_color_key)
+												? line_color
+												: _screen_palette[r[i]];
 					}
 				} else {
-					for (int i = 0; i < g_sys.w; ++i) {
-						_screen_buffer[j * g_sys.w + i] = _screen_palette[p[i]];
+					for (int i = 0; i < g_sys.w * _scale; ++i) {
+						_screen_buffer[j * g_sys.w * _scale + i] = _screen_palette[r[i]];
 					}
 				}
-				p += g_sys.w;
+				r += g_sys.w * _scale;
 			}
 		} else {
-			for (int i = 0; i < g_sys.w * g_sys.h; ++i) {
-				_screen_buffer[i] = _screen_palette[p[i]];
+			for (int i = 0; i < g_sys.w * _scale * g_sys.h * _scale; ++i) {
+				_screen_buffer[i] = _screen_palette[r[i]];
 			}
 			sdl2_print_palette();
 		}
+		if (p != q)
+			free(q);
 		SDL_FreeSurface(_texture);
-		_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w, g_sys.h, 32, g_sys.w * sizeof(uint32_t), rmask, gmask, bmask, amask), _fmt, 0);
+		_texture = SDL_ConvertSurface(SDL_CreateRGBSurfaceFrom(_screen_buffer, g_sys.w * _scale, g_sys.h * _scale, 32, g_sys.w * sizeof(uint32_t) * _scale, rmask, gmask, bmask, amask), _fmt, 0);
 	}
 	if (present) {
 		SDL_Rect *src, *dst;
-		SDL_Rect r={_shake_dx, _shake_dy, g_sys.w, g_sys.h};
+		SDL_Rect r={_shake_dx, _shake_dy, g_sys.w * _scale, g_sys.h * _scale};
 		if (g_sys.slide_type) {
 			init_slide();
 			src = _slide.b;
@@ -722,6 +829,10 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.reset_cache_counters = true;
 		}
 		break;
+	case SDLK_d:
+		if (keydown)
+			sdl2_rescale_screen(-1);
+		break;
 	case SDLK_e:
 		if (keydown) {
 			g_sys.redraw_cache = true;
@@ -743,6 +854,10 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.add_message(_s);
 		}
 		break;
+	case SDLK_i:
+		if (keydown)
+			sdl2_rescale_screen(1);
+		break;
 	case SDLK_j:
 		if (keydown) {
 			sprintf(_s, "Press jump button");
@@ -752,10 +867,11 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		break;
 	case SDLK_o:
 		if (keydown) {
-			fprintf(stderr, "Restoring original window size %dx%d, fullscreen %d\n", _orig_w, _orig_h, _orig_fullscreen);
+			fprintf(stderr, "Restoring original window size %dx%d, scale %d, fullscreen %d\n", _orig_w, _orig_h, _orig_scale, _orig_fullscreen);
 			g_sys.resize = true;
 			_size_lock = false;
-			sdl2_set_screen_size(_orig_w, _orig_h, _caption, _orig_fullscreen, _orig_color);
+			sdl2_set_screen_size(_orig_w * _orig_scale, _orig_h * _orig_scale, _caption, _orig_scale, _orig_fullscreen, _orig_color);
+			sdl2_rescale_spritesheets(_scale);
 			reinit_slide();
 		}
 		break;
@@ -773,6 +889,15 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.add_message(_s);
 		}
 		break;
+	case SDLK_t:
+		if (keydown) {
+			_scale = (_scale == _orig_scale ? 1 : _orig_scale);
+			fprintf(stderr, "Toggling scale to %d\n", _scale);
+			_window_w = g_sys.w * _scale;
+			_window_h = g_sys.h * _scale;
+			g_sys.resize = true;
+			g_sys.resize_screen();
+		}
 	default:
 		break;
 	}
@@ -868,10 +993,15 @@ static int handle_event(const SDL_Event *ev) {
 		}
 		break;
 	case SDL_VIDEORESIZE:
-		_window_w = ev->resize.w;
-		_window_h = ev->resize.h;
-		g_sys.resize = true;
-		g_sys.resize_screen();
+		fprintf(stderr, "Resizing to %dx%d\n", ev->resize.w, ev->resize.h);
+		if (!_size_lock) {
+			_window_w = ev->resize.w;
+			_window_h = ev->resize.h;
+			g_sys.resize = true;
+			g_sys.resize_screen();
+		} else {
+			fprintf(stderr, "Scaling is locked\n");
+		}
 		break;
 	case SDL_KEYUP:
 		handle_keyevent(&ev->key.keysym, 0, &g_sys.input, &g_sys.paused);
@@ -972,7 +1102,13 @@ static void render_load_sprites(int spr_type, int count, const struct sys_rect_t
 	SDL_LockSurface(surface);
 	memcpy(surface->pixels, data, w * h);
 	SDL_UnlockSurface(surface);
-	sheet->texture = SDL_DisplayFormatAlpha(surface);
+	if (sheet->scale != _scale) {
+		print_debug(DBG_SYSTEM, "Rescaling spritesheet %d during load", spr_type);
+		sheet->texture = sdl2_rescale_surface(surface, _scale);
+		sheet->scale = _scale;
+	} else {
+		sheet->texture = SDL_DisplayFormatAlpha(surface);
+	}
 	if (update_pal) { /* update texture on palette change */
 		sheet->surface = surface;
 	} else {
@@ -1016,10 +1152,10 @@ static void render_clear_sprites() {
 }
 
 static void render_set_sprites_clipping_rect(int x, int y, int w, int h) {
-	_sprites_cliprect.x = x;
-	_sprites_cliprect.y = y;
-	_sprites_cliprect.w = w;
-	_sprites_cliprect.h = h;
+	_sprites_cliprect.x = x * _scale;
+	_sprites_cliprect.y = y * _scale;
+	_sprites_cliprect.w = w * _scale;
+	_sprites_cliprect.h = h * _scale;
 }
 
 static void add_message(char *m) {

@@ -42,7 +42,7 @@ Compared to the original DOS executables, the rewritten engines feature:
 - horizontal scrolling
 - configurable screen size
 - dynamically resizable window to control game screen size
-- in-game screen controls for screen size & palette
+- in-game screen controls for screen size, scale & palette
 - on-screen messaging
 - game cheats: unlimited lifes and energy, no hit
 - game pad support with a user-defined jump button
@@ -53,7 +53,7 @@ In addition to the default controls, the engine provides several convenience
 in-game keys for display control.
 
 The screen size lock allows to hold a given game screen size whilst manipulating
-the window.
+the window or scale.
 
 In-game palette cycling is only available in Prehistorik 2.
 
@@ -61,13 +61,16 @@ In-game palette cycling is only available in Prehistorik 2.
 |:-----------:|:-------------------------------------|
 |      A      | Toggle audio                         |
 |      C      | Reset cache stats (in '--debug=128') |
+|      D      | Decrease scale                       |
 |      E      | Toggle screen palette display        |
 |      G      | Toggle animated tiles                |
 |      H      | Toggle Hybrid crack palette bug      |
+|      I      | Increase scale                       |
 |      J      | Configure jump button                |
-|      O      | Restore original screen size         |
+|      O      | Restore original scale & screen size |
 |      P      | Pause game                           |
 |      S      | Toggle screen size lock              |
+|      T      | Toggle scale                         |
 | ALT + Enter | Toggle fullscreen <=> windowed mode  |
 |      -      | Cycle to previous palette            |
 |     + =     | Cycle to next palette                |
@@ -84,6 +87,7 @@ Usage: blues [OPTIONS]...
   --cheats=MASK     Cheats bitmask
   --startpos=XxY    Start at position (X,Y)
   --fullscreen      Enable fullscreen
+  --scale=N         Graphics scaling factor (default 2)
   --screensize=WxH  Graphics screen size (default 320x200)
   --cga             Enable CGA colors
   --dosscroll       Enable DOS style screen scrolling
