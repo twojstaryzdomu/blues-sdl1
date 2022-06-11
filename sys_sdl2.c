@@ -906,6 +906,16 @@ static void handle_controllerbutton(int button, bool pressed, struct input_t *in
 			input->direction &= ~INPUT_DIRECTION_RIGHT;
 		}
 		break;
+	case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+		if (pressed) {
+			sdl2_rescale_screen(-1);
+		}
+		break;
+	case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+		if (pressed) {
+			sdl2_rescale_screen(1);
+		}
+		break;
 	}
 }
 
