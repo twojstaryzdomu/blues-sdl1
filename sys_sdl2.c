@@ -966,6 +966,14 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 	case 3:
 		input->space = pressed;
 		break;
+	case 4:
+		if (pressed)
+			sdl2_rescale_screen(-1);
+		break;
+	case 5:
+		if (pressed)
+			sdl2_rescale_screen(1);
+		break;
 	case 8:
 		g_sys.input.quit = true;
 		break;
