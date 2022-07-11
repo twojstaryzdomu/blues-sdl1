@@ -23,13 +23,13 @@ endif
 
 all: blues bbja pre2
 
-blues: main.o sys_sdl2.o util.o $(BB_SRCS:.c=.o)
+blues: main.o sys.o util.o $(BB_SRCS:.c=.o)
 	$(CC) $(LDFLAGS) -o $@ $^ $(SDL_LIBS) $(MODPLUG_LIBS)
 
-bbja: main.o sys_sdl2.o util.o $(JA_SRCS:.c=.o)
+bbja: main.o sys.o util.o $(JA_SRCS:.c=.o)
 	$(CC) $(LDFLAGS) -o $@ $^ $(SDL_LIBS) $(MODPLUG_LIBS)
 
-pre2: main.o sys_sdl2.o util.o $(P2_SRCS:.c=.o)
+pre2: main.o sys.o util.o $(P2_SRCS:.c=.o)
 	$(CC) $(LDFLAGS) -o $@ $^ $(SDL_LIBS) $(MODPLUG_LIBS)
 
 clean:

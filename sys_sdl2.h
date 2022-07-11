@@ -171,7 +171,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, b
 		_scale = MAX(_scale - 1, 1);
 		print_warning("Unable to fit %dx scaled %dx%d screen within %dx%d window bounds", scale, screen_w, screen_h, _window_w, _window_h, _scale);
 		sprintf(_s, "Unable to scale to %d", scale);
-		g_sys.add_message(_s);
+		g_message.add(_s);
 		return; // refuse to resize when not possible to fit window within bounds
 	}
 	if (!_size_lock) {
@@ -821,7 +821,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.audio = !g_sys.audio;
 			SDL_PauseAudio(!g_sys.audio);
 			sprintf(_s, "Sound %s", g_sys.audio ? "on" : "off");
-			g_sys.add_message(_s);
+			g_message.add(_s);
 		}
 		break;
 	case SDLK_c:
@@ -843,7 +843,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			g_sys.animate_tiles = !g_sys.animate_tiles;
 			sprintf(_s, "Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
-			g_sys.add_message(_s);
+			g_message.add(_s);
 		}
 		break;
 	case SDLK_h:
@@ -851,7 +851,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_sys.hybrid_color = !g_sys.hybrid_color;
 			g_sys.cycle_palette = true;
 			sprintf(_s, "Hybrid colour %s", g_sys.hybrid_color ? "on" : "off");
-			g_sys.add_message(_s);
+			g_message.add(_s);
 		}
 		break;
 	case SDLK_i:
@@ -861,7 +861,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_j:
 		if (keydown) {
 			sprintf(_s, "Press jump button");
-			g_sys.add_message(_s);
+			g_message.add(_s);
 			_joystick_up_setup = true;
 		}
 		break;
@@ -886,7 +886,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			_size_lock = !_size_lock;
 			sprintf(_s, "Size %s", _size_lock ? "locked" : "unlocked");
-			g_sys.add_message(_s);
+			g_message.add(_s);
 		}
 		break;
 	case SDLK_t:
@@ -947,7 +947,7 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 			g_sys.input.jump_button = button;
 			_joystick_up_setup = false;
 			sprintf(_s, "Jump on %d key", g_sys.input.jump_button);
-			g_sys.add_message(_s);
+			g_message.add(_s);
 			return;
 		}
 	}
@@ -1165,71 +1165,3 @@ static void render_set_sprites_clipping_rect(int x, int y, int w, int h) {
 	_sprites_cliprect.w = w * _scale;
 	_sprites_cliprect.h = h * _scale;
 }
-
-static void add_message(char *m) {
-	int j;
-	for (int i = 0; i < MAX_MESSAGES; i++) {
-		if (g_sys.message_queue[i] && strcmp(m, g_sys.message_queue[i]) == 0)
-			return;
-	}
-	for (int i = 0; i < MAX_MESSAGES; i++) {
-		if (!g_sys.message_queue[i])
-			j = i;
-	}
-	g_sys.message_queue[ 0 + j ] = m;
-}
-
-static char* get_message() {
-	for (int i = 0; i < MAX_MESSAGES; i++) {
-		if (g_sys.message_queue[i])
-			return g_sys.message_queue[i];
-	}
-	return 0;
-}
-
-static void clear_message(const char *m) {
-	for (int i = 0; i < MAX_MESSAGES; i++) {
-		if (g_sys.message_queue[i] && strcmp(m, g_sys.message_queue[i]) == 0)
-			g_sys.message_queue[i] = 0;
-	}
-}
-
-static void clear_messages() {
-	for (int i = 0; i < MAX_MESSAGES; i++) {
-		g_sys.message_queue[i] = 0;
-	}
-}
-
-struct sys_t g_sys = {
-	.init = sdl2_init,
-	.fini = sdl2_fini,
-	.set_screen_size = sdl2_set_screen_size,
-	.set_screen_palette = sdl2_set_screen_palette,
-	.set_palette_amiga = sdl2_set_palette_amiga,
-	.set_copper_bars = sdl2_set_copper_bars,
-	.set_palette_color = sdl2_set_palette_color,
-	.fade_in_palette = sdl2_fade_in_palette,
-	.fade_out_palette = sdl2_fade_out_palette,
-	.clear_slide = clear_slide,
-	.resize_screen = sdl2_resize_screen,
-	.update_screen = sdl2_update_screen,
-	.update_screen_cached = sdl2_update_screen_cached,
-	.shake_screen = sdl2_shake_screen,
-	.transition_screen = sdl2_transition_screen,
-	.process_events = sdl2_process_events,
-	.sleep = sdl2_sleep,
-	.get_timestamp = sdl2_get_timestamp,
-	.start_audio = sdl2_start_audio,
-	.stop_audio = sdl2_stop_audio,
-	.lock_audio = sdl2_lock_audio,
-	.unlock_audio = sdl2_unlock_audio,
-	.render_load_sprites = render_load_sprites,
-	.render_unload_sprites = render_unload_sprites,
-	.render_add_sprite = render_add_sprite,
-	.render_clear_sprites = render_clear_sprites,
-	.render_set_sprites_clipping_rect = render_set_sprites_clipping_rect,
-	.add_message = add_message,
-	.get_message = get_message,
-	.clear_message = clear_message,
-	.clear_messages = clear_messages
-};

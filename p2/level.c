@@ -665,7 +665,7 @@ void level_player_die() {
 		if ((g_options.cheats & CHEATS_UNLIMITED_LIFES) == 0) {
 			--g_vars.player_lifes;
 			g_vars.redraw_cache = true;
-			g_sys.add_message("Killed by death");
+			g_message.add("Killed by death");
 			g_vars.message.timelimit = 500;
 			g_vars.player_energy = 0;
 		}
@@ -3350,7 +3350,7 @@ static void level_cycle_palette() {
 			g_sys.palette_offset = 0;
 			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
 			g_vars.message.timelimit = 2500;
-			g_sys.add_message(g_vars.message.s);
+			g_message.add(g_vars.message.s);
 		}
 		if (g_vars.hybrid_color_flag != g_sys.hybrid_color)
 			g_vars.prev_palette = g_vars.palette;
@@ -3362,7 +3362,7 @@ static void level_cycle_palette() {
 			g_sys.cycle_palette = 0;
 			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
 			g_vars.message.timelimit = 500;
-			g_sys.add_message(g_vars.message.s);
+			g_message.add(g_vars.message.s);
 		}
 		g_sys.set_screen_palette(palette, 0, 16, 6);
 	}
@@ -3396,14 +3396,14 @@ static void level_update_light_palette() {
 static void level_draw_messages() {
 	if (g_vars.message.timestamp) {
 		if (g_sys.get_timestamp() - g_vars.message.timestamp > (g_vars.message.timelimit ? g_vars.message.timelimit : MESSAGE_TIMELIMIT)) {
-			g_sys.clear_message(g_vars.message.s);
+			g_message.clear(g_vars.message.s);
 			memset(g_vars.message.s, 0, MESSAGE_MAX);
 			g_vars.message.timelimit = 0;
 			g_vars.message.timestamp = 0;
 		}
 	} else {
-		if (g_sys.get_message()) {
-			strncpy(g_vars.message.s, g_sys.get_message(), MESSAGE_MAX);
+		if (g_message.get()) {
+			strncpy(g_vars.message.s, g_message.get(), MESSAGE_MAX);
 			g_vars.message.timestamp = g_sys.get_timestamp();
 		}
 	}
@@ -3429,7 +3429,7 @@ static void level_resize() {
 		}
 		g_sys.update_screen(g_res.vga, 0);
 		sprintf(g_vars.message.s, "%dx%d", GAME_SCREEN_W, GAME_SCREEN_H);
-		g_sys.add_message(g_vars.message.s);
+		g_message.add(g_vars.message.s);
 		level_draw_messages();
 	}
 }
@@ -4144,7 +4144,7 @@ void do_gameover_animation() {
 void do_level() {
 	static const uint8_t music_tbl[] = { 9, 9, 0, 0, 0, 13, 4, 4, 10, 13, 16, 16, 16, 9, 14, 4 };
 	g_sys.render_set_sprites_clipping_rect(0, 0, TILEMAP_SCREEN_W, TILEMAP_SCREEN_H);
-	g_sys.clear_messages();
+	g_message.clear_all();
 	play_music(music_tbl[g_vars.level_num]);
 	load_level_data(g_vars.level_num);
 	set_level_palette();

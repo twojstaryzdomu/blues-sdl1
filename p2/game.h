@@ -3,6 +3,7 @@
 #define GAME_H__
 
 #include "intern.h"
+#include "message.h"
 #include "sys.h"
 
 extern struct options_t g_options;
