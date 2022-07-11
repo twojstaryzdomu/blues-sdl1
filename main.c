@@ -16,7 +16,7 @@ static const char *DEFAULT_SCALE_FILTER = 0; // nearest pixel sampling
 
 static const char *USAGE =
 	"Usage: %s [OPTIONS]...\n"
-	"  --datapath=PATH   Path to data files (default '.')\n"
+	"  --datapath=PATH   Path to data files (default '%s')\n"
 	"  --level=NUM       Start at level NUM\n"
 	"  --cheats=MASK     Cheats mask\n"
 	"  --startpos=XxY    Start at position (X,Y)\n"
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 			g_options.animate_tiles = false;
 			break;
 		default:
-			fprintf(stdout, USAGE, argv[0], DEFAULT_SCALE_FACTOR, ORIG_W, ORIG_H, DEFAULT_JUMP_BUTTON);
+			fprintf(stdout, USAGE, argv[0], DEFAULT_DATA_PATH, DEFAULT_SCALE_FACTOR, ORIG_W, ORIG_H, DEFAULT_JUMP_BUTTON);
 			return -1;
 		}
 	}
