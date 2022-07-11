@@ -333,11 +333,6 @@ struct vars_t {
 		uint8_t energy;
 		uint8_t bonus_letters_mask;
 	} panel;
-	struct {
-		char s[MESSAGE_MAX];
-		uint32_t timestamp;
-		uint32_t timelimit;
-	} message;
 };
 
 extern struct vars_t g_vars;

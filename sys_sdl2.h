@@ -69,8 +69,6 @@ static char const *_orig_filter;
 static bool _orig_color;
 static bool _print_palette;
 
-static char _s[MESSAGE_MAX];
-
 static SDL_GameController *_controller;
 static SDL_Joystick *_joystick;
 static int _controller_up;
@@ -171,8 +169,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	} else {
 		_scale = MAX(_scale - 1, 1);
 		print_warning("Unable to fit %dx scaled %dx%d screen within %dx%d window bounds", scale, screen_w, screen_h, _window_w, _window_h, _scale);
-		sprintf(_s, "Unable to scale to %d", scale);
-		g_message.add(_s);
+		g_message.add("Unable to scale to %d", scale);
 		return; // refuse to resize when not possible to fit window within bounds
 	}
 	if (!_size_lock) {
@@ -181,9 +178,9 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, c
 	}
 	_centred_x_offset = (g_sys.w - ORIG_W) / 2;
 	_centred_y_offset = (g_sys.h - ORIG_H) / 2;
-	if (!filter || strcmp(filter, "nearest") == 0) {
+	if (!filter || !strcmp(filter, "nearest")) {
 		SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "0", SDL_HINT_OVERRIDE);
-	} else if (strcmp(filter, "linear") == 0) {
+	} else if (!strcmp(filter, "linear")) {
 		SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "1", SDL_HINT_OVERRIDE);
 	} else {
 		print_warning("Unhandled filter '%s'", filter);
@@ -525,7 +522,8 @@ static void sdl2_rehint_screen(const char *f) {
 	g_sys.rehint = true;
 	g_sys.resize_screen();
 	fprintf(stderr, "Set hint quality %s\n", _filter);
-	g_message.add((char *)_filter);
+	g_message.clear(strcmp(_filter, "linear") ? "linear": "nearest");
+	g_message.add(_filter);
 }
 
 static void sdl2_print_palette() {
@@ -721,8 +719,8 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			g_sys.audio = !g_sys.audio;
 			SDL_PauseAudio(!g_sys.audio);
-			sprintf(_s, "Sound %s", g_sys.audio ? "on" : "off");
-			g_message.add(_s);
+			g_message.clear("Sound %s", g_sys.audio ? "off" : "on");
+			g_message.add("Sound %s", g_sys.audio ? "on" : "off");
 		}
 		break;
 	case SDLK_c:
@@ -743,16 +741,16 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 	case SDLK_g:
 		if (keydown) {
 			g_sys.animate_tiles = !g_sys.animate_tiles;
-			sprintf(_s, "Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
-			g_message.add(_s);
+			g_message.clear("Animated tiles %s", g_sys.animate_tiles ? "off" : "on");
+			g_message.add("Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
 		}
 		break;
 	case SDLK_h:
 		if (keydown) {
 			g_sys.hybrid_color = !g_sys.hybrid_color;
 			g_sys.cycle_palette = true;
-			sprintf(_s, "Hybrid colour %s", g_sys.hybrid_color ? "on" : "off");
-			g_message.add(_s);
+			g_message.clear("Hybrid colour %s", g_sys.hybrid_color ? "off" : "on");
+			g_message.add("Hybrid colour %s", g_sys.hybrid_color ? "on" : "off");
 		}
 		break;
 	case SDLK_i:
@@ -761,8 +759,7 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 		break;
 	case SDLK_j:
 		if (keydown) {
-			sprintf(_s, "Press jump button");
-			g_message.add(_s);
+			g_message.add("Press jump button");
 			_controller_up_setup = true;
 		}
 		break;
@@ -795,8 +792,8 @@ static void handle_keyevent(const SDL_Keysym *keysym, bool keydown, struct input
 	case SDLK_s:
 		if (keydown) {
 			_size_lock = !_size_lock;
-			sprintf(_s, "Size %s", _size_lock ? "locked" : "unlocked");
-			g_message.add(_s);
+			g_message.clear("Size %s", _size_lock ? "unlocked" : "locked");
+			g_message.add("Size %s", _size_lock ? "locked" : "unlocked");
 		}
 		break;
 	case SDLK_t:
@@ -847,9 +844,7 @@ static void handle_controllerbutton(int button, bool pressed, struct input_t *in
 		if (pressed) {
 			_controller_up = button;
 			_controller_up_setup = false;
-			int a = _controller_up + 65;
-			sprintf(_s, "Jump on %s key", (char*)&a);
-			g_message.add(_s);
+			g_message.add("Jump on %c key", _controller_up + 65);
 			return;
 		}
 	}
