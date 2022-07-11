@@ -24,10 +24,6 @@
 #define GAME_SCREEN_W g_sys.w
 #define GAME_SCREEN_H g_sys.h
 
-#define MESSAGE_MAX 30
-#define MESSAGE_TIMELIMIT 1000
-#define MAX_MESSAGES 5
-
 struct input_t {
 	uint8_t direction;
 	bool quit;
@@ -80,15 +76,10 @@ struct sys_t {
 	void	(*render_add_sprite)(int spr_type, int frame, int x, int y, int xflip, bool centred);
 	void	(*render_clear_sprites)();
 	void	(*render_set_sprites_clipping_rect)(int x, int y, int w, int h);
-	void	(*add_message)(char *m);
-	char*	(*get_message)();
-	void	(*clear_message)(const char *m);
-	void	(*clear_messages)();
 	void	(*clear_slide)();
 	struct	sys_rect_t slide_rect;
 	enum	sys_slide_e slide_type;
 	uint16_t	slide_end;
-	char	*message_queue[MAX_MESSAGES];
 	bool	paused;
 	bool	audio;
 	bool	resize;
@@ -104,5 +95,6 @@ struct sys_t {
 };
 
 extern struct sys_t g_sys;
+extern struct message_t g_message;
 
 #endif /* SYS_H__ */
