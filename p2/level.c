@@ -3404,7 +3404,7 @@ static void level_draw_messages() {
 		if (g_message.get())
 			g_message.timestamp = g_sys.get_timestamp();
 	if (g_message.get())
-		video_draw_centred_string(g_message.get(), 0);
+		video_draw_string_centred(g_message.get(), 0);
 }
 
 static void level_resize() {
@@ -3667,31 +3667,18 @@ static void level_player_death_animation() {
 
 static void level_completed_bonuses_animation_draw_score() {
 	const int score_digits = _score_8_digits ? 8 : 7;
-	video_draw_string2(0x230, "SCORE");
 	int score = g_vars.score * 10;
-	for (int i = 0; i < score_digits; ++i) {
-		const int digit = score % 10;
-		score /= 10;
-		video_draw_number(0x23C + (score_digits - 1 - i) * 16 / 8, digit);
-	}
+	video_draw_format_string(0x230, "SCORE %0.*d", score_digits, score);
 	if (g_res.dos_demo) {
 		return;
 	}
-	video_draw_string2(0x410, "LEVEL COMPLETED");
 	int percentage = 100;
 	const int total = g_vars.level_complete_secrets_count + g_vars.level_complete_bonuses_count;
 	if (total != 0) {
 		const int current = g_vars.level_current_secrets_count + g_vars.level_current_bonuses_count;
 		percentage = (current * 100) / total;
 	}
-	for (int i = 0; i < 3; ++i) {
-		const int digit = percentage % 10;
-		percentage /= 10;
-		video_draw_number(0x430 + (2 - i) * 16 / 8, digit);
-		if (percentage == 0) {
-			break;
-		}
-	}
+	video_draw_format_string(0x410, "LEVEL COMPLETED %3d", percentage);
 	video_draw_character_spr(0x436, 0x1A);
 }
 
@@ -3996,7 +3983,7 @@ static void level_pause() {
 	video_transition_close();
 	video_clear();
 	level_draw_panel();
-	video_draw_centred_string("PAUSED", 1);
+	video_draw_string_centred("PAUSED", 1);
 	g_sys.update_screen(g_res.vga, 1);
 	const int diff = (g_vars.timestamp + (1000 / 30)) - g_sys.get_timestamp();
 	while (g_sys.paused) {

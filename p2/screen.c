@@ -5,6 +5,7 @@
 #include "resource.h"
 #include "sys.h"
 #include "util.h"
+#include <stdarg.h>
 
 #define MAX_SPRITES 480
 #define MAX_SPRITESHEET_W 2048
@@ -85,7 +86,7 @@ void video_draw_panel_number(int offset, int num) {
 }
 
 void video_draw_number(int offset, int num) {
-	const uint8_t *fnt = g_res.allfonts + 0x1C70;
+	const uint8_t *fnt = g_res.allfonts + DIGITS_OFFSET;
 	const int y = (offset * 8) / ORIG_W;
 	const int x = (offset * 8) % ORIG_W;
 	decode_planar(fnt + num * NUMBER_W * NUMBER_H / 2, g_res.vga + y * GAME_SCREEN_W + x, GAME_SCREEN_W, NUMBER_W, NUMBER_H, 0);
@@ -97,20 +98,8 @@ void video_draw_character_spr(int offset, uint8_t chr) {
 	video_draw_sprite(CHARACTER_OFFSET + chr, x, y, 0, false);
 }
 
-void video_draw_string2(int offset, const char *s) {
-	while (*s) {
-		const uint8_t chr = *s++;
-		if (chr != ' ') {
-			video_draw_character_spr(offset, chr - 0x41);
-		}
-		offset += 2;
-	}
-}
-
-void video_draw_centred_string(const char *s, bool clip) {
+void video_draw_string_clipped(const char *s, int x, int y, bool clip) {
 	const uint8_t l = strlen(s);
-	int x = (TILEMAP_SCREEN_W - STRING_SPR_W * l) / 2;
-	const int y = (TILEMAP_SCREEN_H - STRING_SPR_H) / 2;
 	const uint8_t uppercase_offset = 65;
 	const uint8_t lowercase_offset = 32;
 	const uint8_t number_offset = 6;
@@ -127,6 +116,26 @@ void video_draw_centred_string(const char *s, bool clip) {
 		}
 		x += STRING_SPR_W;
 	}
+}
+
+void video_draw_format_string(int offset, const char *format, ...) {
+	char *s;
+	va_list args;
+	va_start(args, format);
+	vasprintf(&s, format, args);
+	va_end(args);
+	const int y = (offset * 8) / ORIG_W;
+	const int x = (offset * 8) % ORIG_W;
+	video_draw_string_clipped(s, x, y, 0);
+	free(s);
+}
+
+
+void video_draw_string_centred(const char *s, bool clip) {
+	const uint8_t l = strlen(s);
+	int x = (TILEMAP_SCREEN_W - STRING_SPR_W * l) / 2;
+	const int y = (TILEMAP_SCREEN_H - STRING_SPR_H) / 2;
+	video_draw_string_clipped(s, x, y, clip);
 }
 
 void video_resize() {
