@@ -666,7 +666,7 @@ void level_player_die() {
 			--g_vars.player_lifes;
 			g_vars.redraw_cache = true;
 			g_message.add("Killed by death");
-			g_vars.message.timelimit = 500;
+			g_message.timelimit = 500;
 			g_vars.player_energy = 0;
 		}
 	} else {
@@ -3344,13 +3344,13 @@ static bool level_update_palette(const uint8_t *src_pal, const uint8_t *dst_pal,
 static void level_cycle_palette() {
 	if (g_sys.cycle_palette) {
 		g_vars.redraw_cache = true;
+		g_message.clear("PALETTE %d", g_vars.prev_palette);
 		if (g_sys.palette_offset) {
 			g_vars.prev_palette = g_vars.palette;
 			g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
 			g_sys.palette_offset = 0;
-			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
-			g_vars.message.timelimit = 2500;
-			g_message.add(g_vars.message.s);
+			g_message.timelimit = 2500;
+			g_message.add("PALETTE %d", g_vars.palette);
 		}
 		if (g_vars.hybrid_color_flag != g_sys.hybrid_color)
 			g_vars.prev_palette = g_vars.palette;
@@ -3360,9 +3360,8 @@ static void level_cycle_palette() {
 		if (!level_update_palette(src_pal, dst_pal, palette)) {
 			print_debug(DBG_GAME, "palette #%d cycled to #%d\n", g_vars.prev_palette, g_vars.palette);
 			g_sys.cycle_palette = 0;
-			sprintf(g_vars.message.s, "PALETTE %d", g_vars.palette);
-			g_vars.message.timelimit = 500;
-			g_message.add(g_vars.message.s);
+			g_message.timelimit = 500;
+			g_message.add("PALETTE %d", g_vars.palette);
 		}
 		g_sys.set_screen_palette(palette, 0, 16, 6);
 	}
@@ -3394,22 +3393,17 @@ static void level_update_light_palette() {
 }
 
 static void level_draw_messages() {
-	if (g_vars.message.timestamp) {
-		if (g_sys.get_timestamp() - g_vars.message.timestamp > (g_vars.message.timelimit ? g_vars.message.timelimit : MESSAGE_TIMELIMIT)) {
-			g_message.clear(g_vars.message.s);
-			memset(g_vars.message.s, 0, MESSAGE_MAX);
-			g_vars.message.timelimit = 0;
-			g_vars.message.timestamp = 0;
+	if (g_message.timestamp) {
+		if (g_sys.get_timestamp() - g_message.timestamp > (g_message.timelimit ? g_message.timelimit : MESSAGE_TIMELIMIT)) {
+			g_message.clear(g_message.get());
+			g_message.timelimit = 0;
+			g_message.timestamp = 0;
 		}
-	} else {
-		if (g_message.get()) {
-			strncpy(g_vars.message.s, g_message.get(), MESSAGE_MAX);
-			g_vars.message.timestamp = g_sys.get_timestamp();
-		}
-	}
-	if (g_vars.message.s) {
-		video_draw_centred_string(g_vars.message.s, 0);
-	}
+	} else
+		if (g_message.get())
+			g_message.timestamp = g_sys.get_timestamp();
+	if (g_message.get())
+		video_draw_centred_string(g_message.get(), 0);
 }
 
 static void level_resize() {
@@ -3428,8 +3422,7 @@ static void level_resize() {
 			video_copy_centred(g_res.background, ORIG_W, ORIG_H);
 		}
 		g_sys.update_screen(g_res.vga, 0);
-		sprintf(g_vars.message.s, "%dx%d", GAME_SCREEN_W, GAME_SCREEN_H);
-		g_message.add(g_vars.message.s);
+		g_message.add("%dx%d", GAME_SCREEN_W, GAME_SCREEN_H);
 		level_draw_messages();
 	}
 }

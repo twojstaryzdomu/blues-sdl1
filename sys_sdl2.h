@@ -74,8 +74,6 @@ static bool _orig_fullscreen;
 static bool _orig_color;
 static bool _print_palette;
 
-static char _s[MESSAGE_MAX];
-
 static SDL_Joystick *_joystick;
 static bool _joystick_up_setup;
 
@@ -170,8 +168,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, b
 	} else {
 		_scale = MAX(_scale - 1, 1);
 		print_warning("Unable to fit %dx scaled %dx%d screen within %dx%d window bounds", scale, screen_w, screen_h, _window_w, _window_h, _scale);
-		sprintf(_s, "Unable to scale to %d", scale);
-		g_message.add(_s);
+		g_message.add("Unable to scale to %d", scale);
 		return; // refuse to resize when not possible to fit window within bounds
 	}
 	if (!_size_lock) {
@@ -820,8 +817,8 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		if (keydown) {
 			g_sys.audio = !g_sys.audio;
 			SDL_PauseAudio(!g_sys.audio);
-			sprintf(_s, "Sound %s", g_sys.audio ? "on" : "off");
-			g_message.add(_s);
+			g_message.clear("Sound %s", g_sys.audio ? "off" : "on");
+			g_message.add("Sound %s", g_sys.audio ? "on" : "off");
 		}
 		break;
 	case SDLK_c:
@@ -842,16 +839,16 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_g:
 		if (keydown) {
 			g_sys.animate_tiles = !g_sys.animate_tiles;
-			sprintf(_s, "Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
-			g_message.add(_s);
+			g_message.clear("Animated tiles %s", g_sys.animate_tiles ? "off" : "on");
+			g_message.add("Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
 		}
 		break;
 	case SDLK_h:
 		if (keydown) {
 			g_sys.hybrid_color = !g_sys.hybrid_color;
 			g_sys.cycle_palette = true;
-			sprintf(_s, "Hybrid colour %s", g_sys.hybrid_color ? "on" : "off");
-			g_message.add(_s);
+			g_message.clear("Hybrid colour %s", g_sys.hybrid_color ? "off" : "on");
+			g_message.add("Hybrid colour %s", g_sys.hybrid_color ? "on" : "off");
 		}
 		break;
 	case SDLK_i:
@@ -860,8 +857,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		break;
 	case SDLK_j:
 		if (keydown) {
-			sprintf(_s, "Press jump button");
-			g_message.add(_s);
+			g_message.add("Press jump button");
 			_joystick_up_setup = true;
 		}
 		break;
@@ -885,8 +881,8 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_s:
 		if (keydown) {
 			_size_lock = !_size_lock;
-			sprintf(_s, "Size %s", _size_lock ? "locked" : "unlocked");
-			g_message.add(_s);
+			g_message.clear("Size %s", _size_lock ? "unlocked" : "locked");
+			g_message.add("Size %s", _size_lock ? "locked" : "unlocked");
 		}
 		break;
 	case SDLK_t:
@@ -946,8 +942,7 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 		if (pressed) {
 			g_sys.input.jump_button = button;
 			_joystick_up_setup = false;
-			sprintf(_s, "Jump on %d key", g_sys.input.jump_button);
-			g_message.add(_s);
+			g_message.add("Jump on %d key", g_sys.input.jump_button);
 			return;
 		}
 	}
