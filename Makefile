@@ -15,7 +15,7 @@ SRCS := $(BB_SRCS) $(JA_SRCS) $(P2_SRCS)
 OBJS := $(SRCS:.c=.o)
 DEPS := $(SRCS:.c=.d)
 
-CPPFLAGS += -Wall -Wpedantic -MMD $(SDL_CFLAGS) -I. -g
+CPPFLAGS += -Wall -Wpedantic -Wno-unused-function -D_GNU_SOURCE -MMD $(SDL_CFLAGS) -I. -g
 
 all: blues bbja pre2
 

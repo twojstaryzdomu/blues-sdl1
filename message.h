@@ -16,7 +16,7 @@ char	*_queue[MAX_MESSAGES];
 char	_buf[MESSAGE_MAX];
 
 struct message_t {
-	void	(*add)(char *format, ...);
+	void	(*add)(const char *format, ...);
 	char*	(*get)();
 	void	(*clear)(char *format, ...);
 	void	(*clear_all)();
