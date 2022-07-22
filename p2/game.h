@@ -23,6 +23,7 @@ extern struct options_t g_options;
 #define STRING_SPR_W 16
 #define STRING_SPR_H 11
 #define CHARACTER_OFFSET 241
+#define DIGITS_OFFSET 0x1C70
 
 #define CHEATS_NO_HIT           (1 << 0)
 #define CHEATS_UNLIMITED_LIFES  (1 << 1)
@@ -417,8 +418,8 @@ extern void	video_draw_panel(const uint8_t *src);
 extern void	video_draw_panel_number(int offset, int num);
 extern void	video_draw_number(int offset, int num);
 extern void	video_draw_character_spr(int offset, uint8_t chr);
-extern void	video_draw_string2(int offset, const char *str);
-extern void	video_draw_centred_string(const char *s, bool clip);
+extern void	video_draw_format_string(int offset, const char *format, ...);
+extern void	video_draw_string_centred(const char *s, bool clip);
 extern void	video_draw_tile(const uint8_t *src, int x, int y);
 extern void	video_convert_tiles(uint8_t *data, int len);
 extern void	video_load_front_tiles();
