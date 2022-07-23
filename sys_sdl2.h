@@ -698,6 +698,9 @@ static void sdl2_shake_screen(int dx, int dy) {
 }
 
 static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input_t *input, bool *paused) {
+	uint8_t debug_channel;
+	uint16_t debug_level;
+	bool debug_enabled;
 	switch (keysym->sym) {
 	case SDLK_LEFT:
 		if (keydown) {
@@ -789,6 +792,30 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	case SDLK_ESCAPE:
 		if (keydown) {
 			g_sys.input.quit = true;
+		}
+		break;
+	case SDLK_F1:
+	case SDLK_F2:
+	case SDLK_F3:
+	case SDLK_F4:
+	case SDLK_F5:
+	case SDLK_F6:
+	case SDLK_F7:
+	case SDLK_F8:
+	case SDLK_F9:
+	case SDLK_F10:
+	case SDLK_F11:
+	case SDLK_F12:
+		if (keydown) {
+			debug_channel = keysym->sym - SDLK_F1;
+			debug_level = 1 << debug_channel;
+			debug_enabled = g_debug_mask & debug_level;
+			if (debug_enabled)
+				g_debug_mask &= ~debug_level;
+			else
+				g_debug_mask |= debug_level;
+			g_message.clear("%sabled debug %lu", debug_enabled  ? "En" : "Dis", debug_level);
+			g_message.add("%sabled debug %lu", debug_enabled ? "Dis" : "En", debug_level);
 		}
 		break;
 	case SDLK_MINUS:
