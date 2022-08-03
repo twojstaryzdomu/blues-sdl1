@@ -87,8 +87,8 @@ static void monster_add_orb(struct level_monster_t *m, int index, int step) {
 }
 
 static void monster_rotate_pos(struct object_t *obj, struct level_monster_t *m) {
-	obj->x_pos = m->x_pos + ((m->type4.radius * (((int8_t)cos_tbl[m->type4.angle]) >> 2)) >> 4);
-	obj->y_pos = m->y_pos + ((m->type4.radius * (((int8_t)sin_tbl[m->type4.angle]) >> 2)) >> 4);
+	obj->x_pos = m->x_pos + ((m->type4.radius * (((int8_t)cos_tbl_sys[m->type4.angle]) >> 2)) >> 4);
+	obj->y_pos = m->y_pos + ((m->type4.radius * (((int8_t)sin_tbl_sys[m->type4.angle]) >> 2)) >> 4);
 	monster_add_orb(m, m->type4.angle, m->type4.radius);
 }
 

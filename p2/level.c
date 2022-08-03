@@ -10,8 +10,6 @@ static const bool _score_8_digits = true; /* maximum score 99.999.999 */
 
 static const bool _demo_inputs = false;
 
-static const bool _expert = true;
-
 static const bool _redraw_tilemap = true;
 static const bool _redraw_panel = true;
 
@@ -219,7 +217,7 @@ static void load_level_data_init_password_items() {
 	}
 	qsort(items_ptr_tbl, count, sizeof(struct level_item_t *), compare_level_item_x_pos);
 	/* level password */
-	const uint16_t r = random_get_number3(g_vars.level_num + (_expert ? 10 : 0));
+	const uint16_t r = random_get_number3(g_vars.level_num + (g_vars.expert_flag ? 10 : 0));
 	for (int j = 0; j < count; j += 4) {
 		for (int i = 0; i < 4; ++i) {
 			struct level_item_t *item = items_ptr_tbl[j + i];
@@ -1601,7 +1599,7 @@ static void level_update_objects_monsters() {
 	}
 	for (int i = 0; i < g_res.level.monsters_count; ++i) {
 		struct level_monster_t *m = &g_res.level.monsters_tbl[i];
-		if (m->spr_num != 0xFFFF && (m->flags & 4) == 0 && (_expert || (m->type & 0x80) == 0)) {
+		if (m->spr_num != 0xFFFF && (m->flags & 4) == 0 && (g_vars.expert_flag || (m->type & 0x80) == 0)) {
 			const int type = m->type & 0x7F;
 			if (!monster_func2(type, m)) {
 				continue;
@@ -3488,10 +3486,10 @@ static void level_draw_orbs() {
 			continue;
 		}
 
-		const int rx = ((int8_t)cos_tbl[p->index_tbl]) >> 2;
+		const int rx = ((int8_t)cos_tbl_sys[p->index_tbl]) >> 2;
 		p->x_pos += (rx * p->radius) >> 4;
 
-		const int ry = ((int8_t)sin_tbl[p->index_tbl]) >> 2;
+		const int ry = ((int8_t)sin_tbl_sys[p->index_tbl]) >> 2;
 		p->y_pos += (ry * p->radius) >> 4;
 
 		const int y_pos = p->y_pos - g_vars.tilemap.scroll_dy - (g_vars.tilemap.y << 4);
@@ -4018,9 +4016,9 @@ static void do_gameover_animation_helper(const char *gameover, uint8_t gameover_
 	for (int i = 0; i < 3; ++i) {
 		struct object_t *obj = &g_vars.objects_tbl[BONUSES_OFFSET + 8 + i];
 		obj[-20].spr_num = 0xFFFF;
-		const int rx = (((int8_t)cos_tbl[obj->x_friction]) * 65) >> 6;
+		const int rx = (((int8_t)cos_tbl_sys[obj->x_friction]) * 65) >> 6;
 		obj->x_pos = rx + 150;
-		const int ry = (((int8_t)sin_tbl[obj->x_friction]) * 10) >> 6;
+		const int ry = (((int8_t)sin_tbl_sys[obj->x_friction]) * 10) >> 6;
 		obj->y_pos = ry + 309 - gameover_y_offset;
 		obj->data.m.x_velocity = ry;
 		obj->x_friction += 2;

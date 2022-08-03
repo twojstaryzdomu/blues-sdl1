@@ -3,6 +3,7 @@
 #include "sys.h"
 #include "SDL_surface.h"
 #include "SDL_AllocPalette.h"
+#include "sys_sine.h"
 #include "util.h"
 
 #define COPPER_BARS_H 80
@@ -96,6 +97,8 @@ static void x11_set_fullscreen_size(int *w, int *h) {
 }
 #endif
 
+static uint16_t _sine_index;
+
 static int sdl2_init() {
 	print_debug(DBG_SYSTEM, "Byte order is %s endian", SDL_BYTEORDER == SDL_BIG_ENDIAN ? "big" : "little");
 	/* SDL interprets each pixel as a 32-bit number, so our masks must depend
@@ -119,6 +122,7 @@ static int sdl2_init() {
 	_palette = SDL_AllocPalette(256);
 	_screen_buffer = 0;
 	_copper_color_key = -1;
+	g_sys.input.raw = false;
 	const int count = SDL_NumJoysticks();
 	if (count > 0) {
 		for (int i = 0; i < count; ++i) {
@@ -223,6 +227,7 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, b
 	_sprites_cliprect.y = 0;
 	_sprites_cliprect.w = g_sys.w * _scale;
 	_sprites_cliprect.h = g_sys.h * _scale;
+	_sine_index = 0;
 	g_sys.hybrid_color = hybrid_color;
 }
 
@@ -614,7 +619,7 @@ static void sdl2_print_palette() {
 		/*
 		 *  Breakdown:
 		 *  p = pitch = g_sys.w
-		 *  i         -> (x,y) = index ; i++       -> (x,y) = index++
+		 *  i         -> (x,y) = index ; i+        -> (x,y) = index++
 		 *  0         -> (0,0) =       ; 1         -> (1,0) =
 		 *  0 + p * 1 -> (1,0) =       ; 1 + p * 1 -> (1,1) =
 		 *  0 + p * 2 -> (2,0) =       ; 1 + p * 2 -> (2,1) =
@@ -678,7 +683,25 @@ static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_
 			dst = &r;
 		}
 		SDL_FillRect(_renderer, &r, 0);
-		SDL_BlitSurface(_texture, src, _renderer, dst);
+		if (g_sys.sine) {
+			uint16_t sine_x = _sine_index % (ORIG_W * _scale);
+			int sine_y = ((int8_t)sin_tbl_sys[_sine_index % sizeof(sin_tbl_sys)]) + sin_tbl_sys[0];
+			SDL_Rect s1 = { .x = _centred_x_offset * _scale + MAX(0, -sine_x), .y =  _centred_y_offset * _scale + MAX(0, -sine_y), .w = ORIG_W * _scale - sine_x, .h = ORIG_H * _scale - sine_y };
+			SDL_Rect d1 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = ORIG_W * _scale - abs(sine_x), .h = ORIG_H * _scale - abs(sine_y) };
+			print_debug(DBG_SYSTEM, "Sine wave: %d, %d @ %d s1: %d,%d - %d,%d, d1: %d,%d - %d,%d", sine_x, sine_y, _sine_index, s1.x, s1.y, s1.w + s1.x, s1.h + s1.y, d1.x, d1.y, d1.w + d1.x, d1.h + d1.y);
+			SDL_BlitSurface(_texture, &s1, _renderer, &d1);
+			SDL_Rect s2 = { .x = s1.x + s1.w, .y = s1.y + s1.h, .w = ORIG_W * _scale - s1.w, .h = ORIG_H * _scale - s1.h };
+			SDL_Rect d2 = { .x = _centred_x_offset * _scale, .y = _centred_y_offset * _scale, .w = sine_x, .h = sine_y };
+			SDL_BlitSurface(_texture, &s2, _renderer, &d2);
+			SDL_Rect s3 = { .x = s1.x, .y = s1.y + s1.h, .w = s1.w, .h = ORIG_H * _scale - s1.h };
+			SDL_Rect d3 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = _centred_y_offset * _scale, .w = d1.w, .h = sine_y }; 
+			SDL_BlitSurface(_texture, &s3, _renderer, &d3);
+			SDL_Rect s4 = { .x = s1.x + s1.w, .y = s1.y, .w = ORIG_W * _scale - s1.w, .h = s1.h };
+			SDL_Rect d4 = { .x = _centred_x_offset * _scale, .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = sine_x, .h = d1.h };
+			SDL_BlitSurface(_texture, &s4, _renderer, &d4);
+			_sine_index += 1;
+		} else
+			SDL_BlitSurface(_texture, src, _renderer, dst);
 		sdl2_update_sprites_screen();
 		if (_slide.f)
 			SDL_BlitSurface(_texture, _slide.f, _renderer, _slide.f);
@@ -701,6 +724,12 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 	uint8_t debug_channel;
 	uint16_t debug_level;
 	bool debug_enabled;
+	if (g_sys.input.raw && keysym->sym >= '0' && keysym->sym < 'g') {
+		if (keydown) {
+			g_sys.input.hex = keysym->sym;
+			return;
+		}
+	}
 	switch (keysym->sym) {
 	case SDLK_LEFT:
 		if (keydown) {

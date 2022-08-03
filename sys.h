@@ -30,6 +30,8 @@ struct input_t {
 	bool space;
 	bool digit1, digit2, digit3;
 	int jump_button;
+	bool raw;
+	uint8_t hex;
 };
 
 typedef void (*sys_audio_cb)(void *, uint8_t *data, int len);
@@ -89,6 +91,9 @@ struct sys_t {
 	bool	animate_tiles;
 	bool	centred;
 	bool	reset_cache_counters;
+	bool	no_palette_sprites;
+	bool	sine;
+	bool	hex_input;
 	int8_t	palette_offset;
 	int	w, h;
 };
