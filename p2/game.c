@@ -128,6 +128,157 @@ static void do_titus_screen() {
 	}
 }
 
+static void do_motif_screen() {
+	uint8_t *data = load_file("MOTIF.SQZ");
+	g_sys.sine = true;
+	if (data) {
+		g_sys.set_screen_palette(motif_palette_data, 0, 16, 6);
+		do {
+			video_resize();
+			video_copy_img(data);
+			video_copy_centred(g_res.background, ORIG_W, ORIG_H);
+			if (g_sys.cycle_palette) {
+				g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
+				g_sys.set_screen_palette(unique_palettes_tbl[g_vars.palette], 0, 16, 6);
+				g_sys.cycle_palette = false;
+			}
+			g_sys.update_screen(g_res.vga, 0);
+			video_load_sprites();
+			video_draw_motif_string("MODE", 0, 0, 1);
+			char *s = g_vars.expert_flag
+				? "EXPERT"
+				: "BEGINNER";
+			video_draw_motif_string(s, 0, 32, 2);
+			g_sys.update_screen_cached(g_res.vga, 1, 1);
+			wait_input(1);
+			if (g_sys.input.direction) {
+				g_vars.expert_flag = !g_vars.expert_flag;
+				g_sys.input.direction = 0;
+			}
+			while (g_sys.paused)
+				wait_input(100);
+			if (g_sys.input.space)
+				break;
+			g_sys.render_clear_sprites();
+		} while (!g_vars.input.key_space || !g_sys.input.quit);
+		g_vars.input.key_space = 0;
+		g_sys.fade_out_palette();
+		free(data);
+	}
+	g_sys.sine = false;
+}
+
+static unsigned char atoh(unsigned char data) {
+	if (data > '9')
+		data += 9;
+	return (data &= 0x0F);
+}
+
+static void update_code(uint16_t *buf, uint8_t *nibble_index) {
+	if (g_sys.input.hex) {
+		int i = atoh(g_sys.input.hex);
+		if (i < 0xF + 1) {
+			if (*nibble_index < CODE_LEN) {
+				int l = (CODE_LEN - *nibble_index - 1) * 4;
+				*buf	+= i << l;
+				++*nibble_index;
+			} else {
+				wait_input(100);
+				memset(buf, 0, *nibble_index);
+				*nibble_index = 0;
+			}
+		}
+		g_sys.input.hex = 0;
+	}
+}
+
+static void print_codes() {
+	for (int l = 0; l < 8; l++)
+		print_debug(DBG_GAME, "print_codes: level %d = %04X expert %04X", l, random_get_number3(l),  random_get_number3(l + 10));
+}
+
+static bool parse_code(uint16_t *buf, uint8_t *index) {
+	bool rc = false;
+	if (*index == CODE_LEN) {
+		print_debug(DBG_GAME, "parse_code: %04X", *buf);
+		uint8_t levels = 8;
+		uint8_t expert = 10;
+		for (uint8_t l = 0; l < levels; l++) {
+			for (uint16_t r = l; r < levels + expert; r += expert)
+				if (*buf == random_get_number3(r)) {
+					g_vars.level_num = l;
+					g_vars.expert_flag = r / expert;
+					rc = true;
+					break;
+				}
+			if (rc)
+				break;
+		}
+		if (!rc) {
+			if (*buf == level_code[g_vars.password_flag]) {
+				print_debug(DBG_GAME, "parse_code: password matched %04X", level_code[g_vars.password_flag]);
+				if (g_vars.password_flag == CODE_COUNT - 1)
+					print_debug(DBG_GAME, "parse_code: now enter level");
+				++g_vars.password_flag;
+				memset(buf, 0, sizeof(uint16_t));
+				*index = 0;
+			} else {
+				if (g_vars.password_flag == CODE_COUNT) {
+					if (*buf < 14)
+						g_vars.level_num = *buf;
+					g_vars.expert_flag = *buf / expert;
+				}
+				g_vars.password_flag = 0;
+				rc = true;
+			}
+		}
+	}
+	if (rc)
+		print_debug(DBG_GAME, "parse_code: level %d, expert %d", g_vars.level_num, g_vars.expert_flag);
+	return rc;
+}
+
+static void do_code_screen() {
+	uint8_t *data = load_file("MOTIF.SQZ");
+	g_sys.sine = true;
+	if (data) {
+		char str[CODE_LEN + 1];
+		uint8_t nibble_index = 0;
+		uint16_t *buf = calloc(1, sizeof(int16_t));
+		g_sys.input.raw = true;
+		g_sys.set_screen_palette(motif_palette_data, 0, 16, 6);
+		do {
+			video_resize();
+			video_copy_img(data);
+			video_copy_centred(g_res.background, ORIG_W, ORIG_H);
+			if (g_sys.cycle_palette) {
+				g_vars.palette = (g_vars.palette + g_sys.palette_offset + UNIQUE_PALETTES) % UNIQUE_PALETTES;
+				g_sys.set_screen_palette(unique_palettes_tbl[g_vars.palette], 0, 16, 6);
+				g_sys.cycle_palette = false;
+			}
+			g_sys.update_screen(g_res.vga, 0);
+			video_load_sprites();
+			video_draw_motif_string("ENTER CODE", 0, -10, 2);
+			sprintf(str, "%04X", *buf);
+			video_draw_motif_string(str, 0, 40, 1);
+			g_sys.update_screen_cached(g_res.vga, 1, 1);
+			if (g_sys.input.space || parse_code(buf, &nibble_index))
+				break;
+			do {
+				wait_input(5);
+			} while (g_sys.paused);
+			update_code(buf, &nibble_index);
+			g_sys.render_clear_sprites();
+		} while (!g_vars.input.key_space || !g_sys.input.quit);
+		g_vars.input.key_space = 0;
+		g_sys.input.raw = false;
+		g_sys.fade_out_palette();
+		free(data);
+		print_codes();
+	}
+	g_sys.sine = false;
+}
+
 static bool fade_palettes(const uint8_t *target, uint8_t *current) {
 	bool flag = false;
 	for (int i = 0; i < 768; ++i) {
@@ -252,11 +403,11 @@ static void do_map(){
 				if (g_sys.input.quit || g_sys.input.space) {
 					break;
 				}
-				while (g_sys.paused) {
+				do {
 					wait_input(10);
-				}
+				} while (g_sys.paused);
 			}
-			wait_input(1000);
+			g_sys.sleep(1000);
 			g_sys.fade_out_palette();
 			free(g_res.map);
 		}
@@ -298,8 +449,8 @@ static void do_menu2() {
 	}
 }
 
-static bool do_menu() {
-	bool rc = false;
+static int do_menu() {
+	int rc = 0;
 	uint8_t *data = load_file("MENU.SQZ");
 	if (data) {
 		g_sys.set_screen_palette(data, 0, 256, 6);
@@ -311,14 +462,16 @@ static bool do_menu() {
 			memset(g_vars.input.keystate, 0, sizeof(g_vars.input.keystate));
 			const uint32_t start = g_sys.get_timestamp();
 			while (!g_sys.input.quit) {
-				wait_input(30);
+				update_input(300);
 				if (g_vars.input.keystate[2] || g_vars.input.keystate[0x4F] || g_sys.input.space) {
 					g_sys.input.space = 0;
 					g_sys.fade_out_palette();
+					rc = 1;
 					break;
 				}
 				if (g_vars.input.keystate[3] || g_vars.input.keystate[0x50]) {
 					g_sys.fade_out_palette();
+					rc = 2;
 					break;
 				}
 				if (g_sys.resize) {
@@ -326,7 +479,7 @@ static bool do_menu() {
 				}
 				if (!g_res.dos_demo && g_sys.get_timestamp() - start >= 15 * 1000) {
 					g_sys.fade_out_palette();
-					rc = true;
+					rc = 3;
 					break;
 				}
 			}
@@ -434,6 +587,7 @@ static void game_run(const char *data_path) {
 		do_present_screen();
 	}
 	g_vars.random.e = 0x1234;
+	g_vars.expert_flag = false;
 	g_vars.starttime = g_sys.get_timestamp();
 	while (!g_sys.input.quit) {
 		if (1) {
@@ -444,28 +598,40 @@ static void game_run(const char *data_path) {
 			if (g_res.dos_demo) {
 				do_demo_screen();
 			}
-			while (do_menu()) {
-				do_menu2();
+			int rc;
+			while ((rc = do_menu())) {
+				if (rc == 1)
+					break;
+				else if (rc == 2) {
+					do_code_screen();
+					if (g_vars.level_num || g_vars.expert_flag)
+						break;
+				} else
+					do_menu2();
 			}
 			if (g_sys.input.quit) {
 				break;
 			}
+			if (!(g_vars.level_num || g_vars.expert_flag))
+				do_motif_screen();
+			uint8_t level_num;
+			do {
+				g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, TILEMAP_SCREEN_H);
+				level_num = g_vars.level_num;
+				if (g_vars.level_num >= 8 && g_vars.level_num < 10 && 0 /* !g_vars.level_expert_flag */ ) {
+					do_castle_screen();
+					break;
+				}
+				if (g_vars.level_num < 10 && g_options.show_map)
+					do_map();
+				if (g_sys.input.quit)
+					break;
+				do_level();
+				print_debug(DBG_GAME, "previous level %d current %d", level_num, g_vars.level_num);
+			} while (!g_res.dos_demo && g_vars.level_num != level_num);
+			g_vars.level_num = 0;
+			g_vars.expert_flag = false;
 		}
-		uint8_t level_num;
-		do {
-			g_sys.render_set_sprites_clipping_rect(0, 0, GAME_SCREEN_W, TILEMAP_SCREEN_H);
-			level_num = g_vars.level_num;
-			if (g_vars.level_num >= 8 && g_vars.level_num < 10 && 0 /* !g_vars.level_expert_flag */ ) {
-				do_castle_screen();
-				break;
-			}
-			if (g_vars.level_num < 10 && g_options.show_map)
-				do_map();
-			if (g_sys.input.quit)
-				break;
-			do_level();
-			print_debug(DBG_GAME, "previous level %d current %d", level_num, g_vars.level_num);
-		} while (!g_res.dos_demo && g_vars.level_num != level_num);
 	}
 	sound_fini();
 	res_fini();

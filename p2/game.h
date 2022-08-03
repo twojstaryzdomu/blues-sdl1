@@ -5,6 +5,7 @@
 #include "intern.h"
 #include "message.h"
 #include "sys.h"
+#include "sys_sine.h"
 
 extern struct options_t g_options;
 
@@ -33,8 +34,11 @@ extern struct options_t g_options;
 #define MAP_W 640
 #define MAP_H 200
 
-#define UNIQUE_PALETTES 16
+#define UNIQUE_PALETTES 17
 #define LIGHT_PALETTE_OFFSET 12
+
+#define CODE_LEN 4
+#define CODE_COUNT sizeof(level_code) / sizeof(uint16_t)
 
 struct club_anim_t {
 	const uint8_t *anim; /* uint16_t[4] : player spr, club spr, x, y */
@@ -142,7 +146,7 @@ struct boss_level5_leaf_t {
 struct orb_t {
 	uint16_t x_pos;
 	uint16_t y_pos;
-	uint8_t index_tbl; /* cos_/sin_tbl */
+	uint8_t index_tbl; /* cos_/sin_tbl_sys */
 	uint8_t radius;
 };
 
@@ -171,6 +175,8 @@ struct vars_t {
 	} input;
 
 	uint8_t level_num;
+	bool expert_flag;
+	uint8_t password_flag;
 	uint32_t score;
 	uint16_t score_extra_life;
 
@@ -357,6 +363,7 @@ extern const uint8_t present_palette_data[256 * 3];
 extern const uint8_t menu_palette_data[16 * 3];
 extern const uint8_t joystick_palette_data[16 * 3];
 extern const uint8_t gameover_palette_data[16 * 3];
+extern const uint8_t motif_palette_data[16 * 3];
 extern const uint8_t *unique_palettes_tbl[UNIQUE_PALETTES];
 extern const uint8_t spr_offs_tbl[922];
 extern const uint8_t spr_size_tbl[922];
@@ -367,8 +374,6 @@ extern const struct club_anim_t club_anim_tbl[4];
 extern const uint8_t player_anim_lut[32];
 extern const uint8_t player_flying_anim_data[100]; /* uint16_t: player_spr_num, uint16_t: flying_spr_num, int8_t: dx, int8_t: dy */
 extern const uint8_t vscroll_offsets_data[132];
-extern const uint8_t cos_tbl[256];
-extern const uint8_t sin_tbl[256];
 extern const uint16_t monster_spr_tbl[48];
 extern const uint8_t monster_anim_tbl[1100];
 extern const uint8_t boss_minotaur_seq_data[86];
@@ -380,6 +385,7 @@ extern const uint8_t demo_anim_data[26];
 extern const uint8_t gameover_anim1_data[18];
 extern const uint8_t gameover_anim2_data[34];
 extern const uint8_t gameover_anim3_data[20];
+extern const uint16_t level_code[3];
 
 /* game.c */
 extern void	update_input();
@@ -420,6 +426,7 @@ extern void	video_draw_number(int offset, int num);
 extern void	video_draw_character_spr(int offset, uint8_t chr);
 extern void	video_draw_format_string(int offset, const char *format, ...);
 extern void	video_draw_string_centred(const char *s, bool clip);
+extern void	video_draw_motif_string(const char *s, bool clip, int y_offset, int wspace);
 extern void	video_draw_tile(const uint8_t *src, int x, int y);
 extern void	video_convert_tiles(uint8_t *data, int len);
 extern void	video_load_front_tiles();

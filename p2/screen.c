@@ -34,6 +34,10 @@ static void decode_planar(const uint8_t *src, uint8_t *dst, int dst_pitch, int w
 	}
 }
 
+void video_draw_fonts() {
+	decode_planar(g_res.allfonts + GAME_SCREEN_W + GAME_SCREEN_H, g_res.vga, GAME_SCREEN_W, GAME_SCREEN_W, GAME_SCREEN_H, 0);
+}
+
 static void convert_planar_tile_4bpp(const uint8_t *src, uint8_t *dst, int dst_pitch) {
 	static const int tile_h = 16;
 	static const int tile_w = 16;
@@ -98,6 +102,43 @@ void video_draw_character_spr(int offset, uint8_t chr) {
 	video_draw_sprite(CHARACTER_OFFSET + chr, x, y, 0, false);
 }
 
+static void video_draw_string2(const char *s, bool clip, int y_offset, int wspace, bool bold, bool chr_spacing) {
+	const uint8_t uppercase_offset = 65;
+	const uint8_t lowercase_offset = 32;
+	const uint8_t number_offset = 6;
+	const uint8_t digits_ascii = '0' + 0xF;
+	const uint8_t l = strlen(s);
+	const int y = (TILEMAP_SCREEN_H - STRING_SPR_H) / 2 + y_offset;
+	uint8_t nspaces = 0;
+	for (int i = 0; s[i]; i++)
+		if (s[i] == ' ')
+			nspaces++;
+	if (!wspace)
+		wspace = 1;
+	uint16_t string_screen_w = STRING_SPR_W * (l + chr_spacing * (l - nspaces - 1) / wspace);
+	int x = (TILEMAP_SCREEN_W - string_screen_w) / 2;
+	if (bold)
+		x--;
+	if (clip)
+		g_sys.render_set_sprites_clipping_rect(x, y, string_screen_w, STRING_SPR_H);
+	while (*s) {
+		const uint8_t chr = *s++;
+		if (chr != ' ') {
+			uint8_t offset = chr > digits_ascii ? uppercase_offset : number_offset;
+			offset += chr > lowercase_offset + uppercase_offset - 1 ? lowercase_offset : 0;
+			if (bold)
+				video_draw_sprite(CHARACTER_OFFSET + chr - offset, x + 1, y + 1, 0, false);
+			video_draw_sprite(CHARACTER_OFFSET + chr - offset, x, y, 0, false);
+			x += chr_spacing * STRING_SPR_W / wspace;
+		}
+		x += STRING_SPR_W;
+	}
+}
+
+void video_draw_motif_string(const char *s, bool clip, int y_offset, int wspace) {
+	video_draw_string2(s, clip, y_offset, wspace, true, wspace);
+}
+
 void video_draw_string_clipped(const char *s, int x, int y, bool clip) {
 	const uint8_t l = strlen(s);
 	const uint8_t uppercase_offset = 65;
@@ -129,7 +170,6 @@ void video_draw_format_string(int offset, const char *format, ...) {
 	video_draw_string_clipped(s, x, y, 0);
 	free(s);
 }
-
 
 void video_draw_string_centred(const char *s, bool clip) {
 	const uint8_t l = strlen(s);
