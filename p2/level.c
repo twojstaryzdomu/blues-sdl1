@@ -2801,12 +2801,12 @@ static void level_update_player_collision() {
 			g_vars.player_club_type = 3;
 			level_clear_item(obj);
 		} else if (num <= 20) {
-			play_sound(8);
 			level_clear_item(obj);
 			++g_vars.bonus_energy_counter;
 			g_vars.redraw_cache = true;
 			if (g_vars.bonus_energy_counter >= 6) {
 				if (g_vars.player_energy != 3) {
+					play_sound(8);
 					++g_vars.player_energy;
 					g_vars.redraw_cache = true;
 					g_vars.bonus_energy_counter = 0;
@@ -2884,8 +2884,8 @@ static void level_update_player_collision() {
 			g_vars.redraw_cache = true;
 			level_add_object75_score(obj, 228);
 		} else if (num == 173) {
-			play_sound(4);
 			if (g_vars.player_energy < 3) {
+				play_sound(4);
 				++g_vars.player_energy;
 				g_vars.redraw_cache = true;
 				level_clear_item(obj);
