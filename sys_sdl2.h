@@ -402,6 +402,9 @@ static void sdl2_update_sprites_screen() {
 		if (spr->num >= sheet->count) {
 			continue;
 		}
+		if (g_sys.paused)
+			if (spr->num < 241 || spr->num > 241 + 32)
+				continue;
 		SDL_Rect r;
 		r.x = spr->x + _shake_dx;
 		r.y = spr->y + _shake_dy;
