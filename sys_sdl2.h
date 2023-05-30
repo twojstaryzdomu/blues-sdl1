@@ -3,6 +3,7 @@
 #include "sys.h"
 #include "SDL_surface.h"
 #include "SDL_AllocPalette.h"
+#include "SDL_Render.h"
 #include "sys_sine.h"
 #include "util.h"
 
@@ -97,7 +98,12 @@ static void x11_set_fullscreen_size(int *w, int *h) {
 }
 #endif
 
-static uint16_t _sine_index;
+static int16_t _sine_index;
+static int _sine_direction;
+static bool _sine_plot;
+static int8_t _sine_offset_y;
+static uint16_t _sine_scale_x;
+static uint16_t _sine_scale_y, _orig_sine_scale_y;
 
 static int sdl2_init() {
 	print_debug(DBG_SYSTEM, "Byte order is %s endian", SDL_BYTEORDER == SDL_BIG_ENDIAN ? "big" : "little");
@@ -156,6 +162,10 @@ static void sdl2_fini() {
 	if (_joystick) {
 		SDL_JoystickClose(_joystick);
 		_joystick = 0;
+	}
+	if (_pixel) {
+		SDL_free(_pixel);
+		_pixel = 0;
 	}
 	SDL_Quit();
 }
@@ -228,6 +238,11 @@ static void sdl2_set_screen_size(int w, int h, const char *caption, int scale, b
 	_sprites_cliprect.w = g_sys.w * _scale;
 	_sprites_cliprect.h = g_sys.h * _scale;
 	_sine_index = 0;
+	_sine_direction = 1;
+	_sine_offset_y = ORIG_H / 2 - sine_tbl[0];
+	_sine_scale_x = 2;
+	_sine_scale_y = 10;
+	_orig_sine_scale_y = _sine_scale_y;
 	g_sys.hybrid_color = hybrid_color;
 }
 
@@ -640,6 +655,45 @@ static void sdl2_print_palette() {
 	}
 }
 
+static void sdl2_sine_screen() {
+	uint16_t sine_x = _sine_index * _scale;
+	int16_t sine_y = ((sine_tbl[_sine_index]) + _sine_offset_y) * _sine_scale_y / 10 * _sine_scale_x * _scale;
+	SDL_Rect s1 = { .x = _centred_x_offset * _scale + MAX(0, -sine_x), .y =  _centred_y_offset * _scale + MAX(0, -sine_y), .w = ORIG_W * _scale - abs(sine_x), .h = ORIG_H * _scale - abs(sine_y) };
+	SDL_Rect d1 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = s1.w, .h = s1.h };
+	SDL_Rect s2 = { .x = sine_x > 0 ? s1.x + s1.w : _centred_x_offset * _scale, .y = sine_y > 0 ? s1.y + s1.h : _centred_y_offset * _scale, .w = ORIG_W * _scale - s1.w, .h = ORIG_H * _scale - s1.h };
+	SDL_Rect d2 = { .x = _centred_x_offset * _scale, .y = sine_y < 0 ? d1.h + d1.y : _centred_y_offset * _scale, .w = sine_x, .h = s2.h };
+	SDL_Rect s3 = { .x = s1.x, .y = sine_y > 0 ? s1.y + s1.h : _centred_y_offset * _scale, .w = s1.w, .h = ORIG_H * _scale - s1.h };
+	SDL_Rect d3 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = d2.y, .w = d1.w, .h = ORIG_H * _scale - d1.h };
+	SDL_Rect s4 = { .x = s1.x + s1.w, .y = s1.y, .w = ORIG_W * _scale - s1.w, .h = s1.h };
+	SDL_Rect d4 = { .x = _centred_x_offset * _scale, .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = sine_x, .h = d1.h };
+	print_debug(DBG_SYSTEM, "Sine wave: %d, %d @ %d "
+				"s1: %d,%d - %d,%d "
+				"d1: %d,%d - %d,%d "
+				"s1.h = %d; s1.y = %d; d1.h = %d; d1.y = %d; dir = %d",
+				sine_x, sine_y, _sine_index,
+				s1.x, s1.y, s1.w + s1.x, s1.h + s1.y,
+				d1.x, d1.y, d1.w + d1.x, d1.h + d1.y,
+				s1.h, s1.y, d1.h, d1.y, _sine_direction);
+	SDL_BlitSurface(_texture, &s1, _renderer, &d1);
+	SDL_BlitSurface(_texture, &s2, _renderer, &d2);
+	SDL_BlitSurface(_texture, &s3, _renderer, &d3);
+	SDL_BlitSurface(_texture, &s4, _renderer, &d4);
+	if (_sine_plot) {
+		if (!_pixel)
+			_pixel = SDL_SetRenderDrawColor(255, 0, 0, 255);
+		uint16_t x;
+		int16_t sine_plot_y;
+		for (x = 0; x <= _sine_index; x++) {
+			sine_plot_y = ((sine_tbl[x]) + _sine_offset_y) * _sine_scale_y / 10 * _sine_scale_x * _scale;
+			if (x > 0 && x < ORIG_W && sine_plot_y > 0 && sine_plot_y < ORIG_H * _scale)
+				SDL_RenderDrawPixel(_renderer, x * _scale + _centred_x_offset, sine_plot_y + _centred_y_offset);
+		}
+		print_debug(DBG_SYSTEM, "Sine plot: %d, %d _sine_scale_x %d _sine_scale_y %d _sine_offset_y %d sine_tbl(x) %d",
+					x, sine_plot_y, _sine_scale_x, _sine_scale_y / 10, _sine_offset_y, sine_tbl[x]);
+	}
+	_sine_index = (_sine_index + _sine_direction + ORIG_W) % ORIG_W;
+}
+
 static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_redraw) {
 	if (!cache_redraw || g_sys.resize) {
 		uint8_t *r	= (_scale > 1)
@@ -687,22 +741,7 @@ static void sdl2_update_screen_cached(const uint8_t *p, int present, bool cache_
 		}
 		SDL_FillRect(_renderer, &r, 0);
 		if (g_sys.sine) {
-			uint16_t sine_x = _sine_index % (ORIG_W * _scale);
-			int sine_y = ((int8_t)sin_tbl_sys[_sine_index % sizeof(sin_tbl_sys)]) + sin_tbl_sys[0];
-			SDL_Rect s1 = { .x = _centred_x_offset * _scale + MAX(0, -sine_x), .y =  _centred_y_offset * _scale + MAX(0, -sine_y), .w = ORIG_W * _scale - sine_x, .h = ORIG_H * _scale - sine_y };
-			SDL_Rect d1 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = ORIG_W * _scale - abs(sine_x), .h = ORIG_H * _scale - abs(sine_y) };
-			print_debug(DBG_SYSTEM, "Sine wave: %d, %d @ %d s1: %d,%d - %d,%d, d1: %d,%d - %d,%d", sine_x, sine_y, _sine_index, s1.x, s1.y, s1.w + s1.x, s1.h + s1.y, d1.x, d1.y, d1.w + d1.x, d1.h + d1.y);
-			SDL_BlitSurface(_texture, &s1, _renderer, &d1);
-			SDL_Rect s2 = { .x = s1.x + s1.w, .y = s1.y + s1.h, .w = ORIG_W * _scale - s1.w, .h = ORIG_H * _scale - s1.h };
-			SDL_Rect d2 = { .x = _centred_x_offset * _scale, .y = _centred_y_offset * _scale, .w = sine_x, .h = sine_y };
-			SDL_BlitSurface(_texture, &s2, _renderer, &d2);
-			SDL_Rect s3 = { .x = s1.x, .y = s1.y + s1.h, .w = s1.w, .h = ORIG_H * _scale - s1.h };
-			SDL_Rect d3 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = _centred_y_offset * _scale, .w = d1.w, .h = sine_y }; 
-			SDL_BlitSurface(_texture, &s3, _renderer, &d3);
-			SDL_Rect s4 = { .x = s1.x + s1.w, .y = s1.y, .w = ORIG_W * _scale - s1.w, .h = s1.h };
-			SDL_Rect d4 = { .x = _centred_x_offset * _scale, .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = sine_x, .h = d1.h };
-			SDL_BlitSurface(_texture, &s4, _renderer, &d4);
-			_sine_index += 1;
+			sdl2_sine_screen();
 		} else
 			SDL_BlitSurface(_texture, src, _renderer, dst);
 		sdl2_update_sprites_screen();
@@ -850,6 +889,26 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			g_message.add("%sabled debug %lu", debug_enabled ? "Dis" : "En", debug_level);
 		}
 		break;
+	case SDLK_KP2:
+		if (keydown)
+			_sine_offset_y++;
+		break;
+	case SDLK_KP4:
+		if (keydown) {
+			_sine_scale_y += _orig_sine_scale_y / 10;
+			_sine_offset_y -= 2 * _orig_sine_scale_y / 10;
+		}
+		break;
+	case SDLK_KP6:
+		if (keydown) {
+			_sine_scale_y -= _orig_sine_scale_y / 10;
+			_sine_offset_y += 2 * _orig_sine_scale_y / 10;
+		}
+		break;
+	case SDLK_KP8:
+		if (keydown)
+			_sine_offset_y--;
+		break;
 	case SDLK_MINUS:
 		if (keydown) {
 			g_sys.palette_offset = -1;
@@ -920,6 +979,10 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			_joystick_up_setup = true;
 		}
 		break;
+	case SDLK_k:
+		if (keydown)
+			_sine_plot = !_sine_plot;
+		break;
 	case SDLK_o:
 		if (keydown) {
 			fprintf(stderr, "Restoring original window size %dx%d, scale %d, fullscreen %d\n", _orig_w, _orig_h, _orig_scale, _orig_fullscreen);
@@ -936,6 +999,10 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 			if (g_sys.audio)
 				SDL_PauseAudio(*paused);
 		}
+		break;
+	case SDLK_q:
+		if (keydown)
+			_sine_direction = -_sine_direction;
 		break;
 	case SDLK_s:
 		if (keydown) {
