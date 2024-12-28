@@ -1095,10 +1095,10 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 		if (pressed)
 			sdl2_rescale_screen(1);
 		break;
-	case 8:
+	case 6:
 		g_sys.input.quit = true;
 		break;
-	case 9:
+	case 7:
 		if (pressed) {
 			g_sys.paused = (bool)(g_sys.paused ? false : true);
 			if (g_sys.audio)
