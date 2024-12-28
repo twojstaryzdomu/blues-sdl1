@@ -1114,6 +1114,12 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 			sdl2_toggle_animate_tiles();
 		}
 		break;
+	case 9:
+		if (pressed) {
+			g_sys.palette_offset = 1;
+			g_sys.cycle_palette = true;
+		}
+		break;
 	}
 }
 
