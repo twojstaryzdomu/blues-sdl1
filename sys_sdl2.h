@@ -762,6 +762,12 @@ static void sdl2_shake_screen(int dx, int dy) {
 	_shake_dy = dy;
 }
 
+static void sdl2_toggle_animate_tiles() {
+	g_sys.animate_tiles = !g_sys.animate_tiles;
+	g_message.clear("Animated tiles %s", g_sys.animate_tiles ? "off" : "on");
+	g_message.add("Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
+}
+
 static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input_t *input, bool *paused) {
 	uint8_t debug_channel;
 	uint16_t debug_level;
@@ -956,9 +962,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 		break;
 	case SDLK_g:
 		if (keydown) {
-			g_sys.animate_tiles = !g_sys.animate_tiles;
-			g_message.clear("Animated tiles %s", g_sys.animate_tiles ? "off" : "on");
-			g_message.add("Animated tiles %s", g_sys.animate_tiles ? "on" : "off");
+			sdl2_toggle_animate_tiles();
 		}
 		break;
 	case SDLK_h:
@@ -1104,6 +1108,12 @@ static void handle_joystickbutton(int button, int pressed, struct input_t *input
 			if (g_sys.audio)
 				SDL_PauseAudio(g_sys.paused);
 		}
+		break;
+	case 8:
+		if (pressed) {
+			sdl2_toggle_animate_tiles();
+		}
+		break;
 	}
 }
 
