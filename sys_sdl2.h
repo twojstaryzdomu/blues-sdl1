@@ -658,7 +658,7 @@ static void sdl2_print_palette() {
 static void sdl2_sine_screen() {
 	uint16_t sine_x = _sine_index * _scale;
 	int16_t sine_y = ((sine_tbl[_sine_index]) + _sine_offset_y) * _sine_scale_y / 10 * _sine_scale_x * _scale;
-	SDL_Rect s1 = { .x = _centred_x_offset * _scale + MAX(0, -sine_x), .y =  _centred_y_offset * _scale + MAX(0, -sine_y), .w = ORIG_W * _scale - abs(sine_x), .h = ORIG_H * _scale - abs(sine_y) };
+	SDL_Rect s1 = { .x = _centred_x_offset * _scale + MAX(0, -sine_x), .y = _centred_y_offset * _scale + MAX(0, -sine_y), .w = ORIG_W * _scale - abs(sine_x), .h = ORIG_H * _scale - abs(sine_y) };
 	SDL_Rect d1 = { .x = _centred_x_offset * _scale + MAX(0, sine_x), .y = _centred_y_offset * _scale + MAX(0, sine_y), .w = s1.w, .h = s1.h };
 	SDL_Rect s2 = { .x = sine_x > 0 ? s1.x + s1.w : _centred_x_offset * _scale, .y = sine_y > 0 ? s1.y + s1.h : _centred_y_offset * _scale, .w = ORIG_W * _scale - s1.w, .h = ORIG_H * _scale - s1.h };
 	SDL_Rect d2 = { .x = _centred_x_offset * _scale, .y = sine_y < 0 ? d1.h + d1.y : _centred_y_offset * _scale, .w = sine_x, .h = s2.h };
@@ -891,7 +891,7 @@ static void handle_keyevent(const SDL_keysym *keysym, bool keydown, struct input
 				g_debug_mask &= ~debug_level;
 			else
 				g_debug_mask |= debug_level;
-			g_message.clear("%sabled debug %lu", debug_enabled  ? "En" : "Dis", debug_level);
+			g_message.clear("%sabled debug %lu", debug_enabled ? "En" : "Dis", debug_level);
 			g_message.add("%sabled debug %lu", debug_enabled ? "Dis" : "En", debug_level);
 		}
 		break;
